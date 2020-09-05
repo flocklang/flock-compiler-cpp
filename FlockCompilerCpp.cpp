@@ -1,6 +1,9 @@
 // FlockCompilerCpp.cpp : This file contains the 'main' function. Program execution begins and ends there.
 //
 
+// Fixes for specific compilers and IDEs go in here, try not to polute the rest of the code.
+#include "CompilerFix.h"
+
 #include <iostream>
 
 int main()
