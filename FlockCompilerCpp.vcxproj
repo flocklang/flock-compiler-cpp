@@ -144,6 +144,7 @@
   <ItemGroup>
     <None Include=".gitattributes" />
     <None Include=".gitignore" />
+    <None Include="LICENSE" />
     <None Include="packages.config" />
     <None Include="README.md" />
   </ItemGroup>

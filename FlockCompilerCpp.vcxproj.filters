@@ -30,6 +30,9 @@
     <None Include=".gitattributes">
       <Filter>Resource Files</Filter>
     </None>
+    <None Include="LICENSE">
+      <Filter>Resource Files</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CompilerFix.h">
