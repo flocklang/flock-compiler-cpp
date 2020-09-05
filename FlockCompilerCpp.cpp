@@ -19,10 +19,21 @@
 #include "CompilerFix.h"
 
 #include <iostream>
+#include <string>
+#include "Tokenizer.h"
+
+using namespace flock::tokenizer;
 
 int main()
 {
     std::cout << "Hello Flock!\n";
+    Tokenizer tokenizer;
+    Token token = tokenizer.nextToken();
+    std::cout << token.getSource().getText()
+        + ", ls:" + std::to_string(token.getSource().getStart().getLine())
+        + ", cs:" + std::to_string(token.getSource().getStart().getColumn())
+        + ", le:" + std::to_string(token.getSource().getEnd().getLine())
+        + ", ce:" + std::to_string(token.getSource().getEnd().getColumn());
 }
 
 // Run program: Ctrl + F5 or Debug > Start Without Debugging menu
