@@ -1,4 +1,5 @@
 #include <string>
+#include <memory>
 
 namespace flock {
 	namespace tokenizer {
@@ -36,25 +37,122 @@ namespace flock {
 			}
 		};
 
+		enum class Token_Type {
+			Eof,
+			Identifier,
+			Number
+		};
+
 		class Token {
-		private:
+		protected:
 			Source source;
 		public:
+			virtual ~Token() = default;
+
+			
 			Source  getSource() {
 				return source;
 			}
-			Token(Source source) : source(std::move(source)) {}
+
+			virtual Token_Type getType() = 0;
+
+			Token(Source source) : source(std::move(source)){}
+
 		};
 
-		class Tokenizer{
+
+		class EOF_Token : public Token {
 		public:
-			Token nextToken() {
-				std::string sourceText = "MySource";
-				SourceLocation start(1, 2);
-				SourceLocation end(3, 4);
-				Source mySource(sourceText, SourceLocation(start), SourceLocation(end));
-				Token token(mySource);
-				return token;
+			Token_Type getType() override {
+				return Token_Type::Eof;
+			}
+
+			EOF_Token(Source source) : Token(source) {}
+		};
+
+		class Identifier_Token : public Token {
+		public:
+			Token_Type getType() override {
+				return Token_Type::Identifier;
+			}
+			Identifier_Token(Source source) : Token(source) {}
+		};
+
+		class Number_Token : public Token {
+		public:
+			Token_Type getType() override {
+				return Token_Type::Number;
+			}
+			Number_Token(Source source) : Token(source) {}
+		};
+
+
+		class Tokenizer{
+		private:
+			int line;
+			int column;
+			int char_at;
+
+			int getNextChar() {
+				int nextChar = getchar();
+				char_at++;
+				if (nextChar == '\n' || nextChar == '\r') {
+					line++;
+					column = 0;
+				} else {
+					column++;
+				}
+				return nextChar;
+			}
+
+
+		public:
+
+			//todo make this a char stream.
+			Tokenizer() {
+				line = 1;
+				column = 0;
+				char_at = 0;
+			}
+			virtual ~Tokenizer() = default;
+
+			std::unique_ptr<Token> nextToken() {
+				int currentChar = ' ';
+				while (isspace(currentChar)) {
+					currentChar = getNextChar();
+				}
+				SourceLocation start(line, column);
+				SourceLocation end = start;
+
+				if (isalpha(currentChar)) {
+					std::string identifierString;
+					identifierString = currentChar;
+					
+					// TODO support underscores
+					while (isalnum((currentChar = getNextChar()))) {
+						identifierString += currentChar;
+						end = SourceLocation(line, column);
+					}
+					Source mySource(identifierString, start, end);
+					Identifier_Token identifier_token(mySource);
+					return std::make_unique<Identifier_Token>(identifier_token);
+					//TODO do keyword detection here.
+				}
+				if (isdigit(currentChar) || currentChar == '.') { // Number: [0-9.]+
+					std::string numberString;
+					do {
+						numberString += currentChar;
+						end = SourceLocation(line, column);
+						currentChar = getNextChar();
+					} while (isdigit(currentChar) || currentChar == '.');
+					Source mySource(numberString, start, end);
+					Number_Token number_token(mySource);
+					return std::make_unique<Number_Token>(number_token);
+				}
+
+				Source mySource("unknown", start, end);
+				EOF_Token eof_token(mySource);
+				return std::make_unique<EOF_Token>(eof_token);
 			}
 		};
 	}

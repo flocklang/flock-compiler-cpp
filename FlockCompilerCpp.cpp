@@ -20,20 +20,37 @@
 
 #include <iostream>
 #include <string>
+#include <memory>
 #include "Tokenizer.h"
 
 using namespace flock::tokenizer;
 
+
+/// top ::= definition | external | expression | ';'
+static void MainLoop() {
+    Tokenizer tokenizer;
+    while (true) {
+        fprintf(stderr, "\nready> ");
+
+        std::unique_ptr<Token> token = tokenizer.nextToken();
+        switch (token->getType()) {
+        case Token_Type::Eof:
+            fprintf(stderr, "EOF");
+            return;
+        default:
+
+            fprintf(stderr, "\ntype:%i, value:'%s', start:{line: %i, column: %i}, end:{line: %i, column: %i}",
+                token->getType(), token->getSource().getText().c_str(),
+                token->getSource().getStart().getLine(), token->getSource().getStart().getColumn(),
+                token->getSource().getEnd().getLine(), token->getSource().getEnd().getColumn());
+        }
+    }
+}
+
 int main()
 {
     std::cout << "Hello Flock!\n";
-    Tokenizer tokenizer;
-    Token token = tokenizer.nextToken();
-    std::cout << token.getSource().getText()
-        + ", ls:" + std::to_string(token.getSource().getStart().getLine())
-        + ", cs:" + std::to_string(token.getSource().getStart().getColumn())
-        + ", le:" + std::to_string(token.getSource().getEnd().getLine())
-        + ", ce:" + std::to_string(token.getSource().getEnd().getColumn());
+    MainLoop();
 }
 
 // Run program: Ctrl + F5 or Debug > Start Without Debugging menu
