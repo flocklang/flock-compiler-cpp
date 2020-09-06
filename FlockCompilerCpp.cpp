@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-// FlockCompilerCpp.cpp : This file contains the 'main' function. Program execution begins and ends there.
-// Fixes for specific compilers and IDEs go in here, try not to polute the rest of the code.
+ // FlockCompilerCpp.cpp : This file contains the 'main' function. Program execution begins and ends there.
+ // Fixes for specific compilers and IDEs go in here, try not to polute the rest of the code.
 #include "CompilerFix.h"
 
 #include <iostream>
@@ -28,29 +28,29 @@ using namespace flock::tokenizer;
 
 /// top ::= definition | external | expression | ';'
 static void MainLoop() {
-    Tokenizer tokenizer;
-    while (true) {
-        fprintf(stderr, "\nready> ");
+	Tokenizer tokenizer;
+	while (true) {
+		fprintf(stderr, "\nready> ");
 
-        std::unique_ptr<Token> token = tokenizer.nextToken();
-        switch (token->getType()) {
-        case Token::Type::Eof:
-            fprintf(stderr, "EOF");
-            return;
-        default:
+		std::unique_ptr<Token> token = tokenizer.nextToken();
 
-            fprintf(stderr, "\ntype:%i, value:'%s', start:{line: %i, column: %i}, end:{line: %i, column: %i}",
-                token->getType(), token->getSource().getText().c_str(),
-                token->getSource().getStart().getLine(), token->getSource().getStart().getColumn(),
-                token->getSource().getEnd().getLine(), token->getSource().getEnd().getColumn());
-        }
-    }
+		fprintf(stderr, "type:%s, value:'%s', start:{line: %i, column: %i}, end:{line: %i, column: %i}",
+			token->getTypeName().c_str(), token->getSource().getText().c_str(),
+			token->getSource().getStart().getLine(), token->getSource().getStart().getColumn(),
+			token->getSource().getEnd().getLine(), token->getSource().getEnd().getColumn());
+		switch (token->getType()) {
+		case Token::Type::Eof:
+			return;
+		default:
+			break;
+		}
+	}
 }
 
 int main()
 {
-    std::cout << "Hello Flock!\n";
-    MainLoop();
+	std::cout << "Hello Flock!\n";
+	MainLoop();
 }
 
 // Run program: Ctrl + F5 or Debug > Start Without Debugging menu

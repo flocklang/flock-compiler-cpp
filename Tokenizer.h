@@ -15,6 +15,7 @@
  */
 #include <string>
 #include <memory>
+#include <deque>
 
 namespace flock {
 	namespace tokenizer {
@@ -22,6 +23,7 @@ namespace flock {
 		private:
 			int line;
 			int column;
+			int sourceChar;
 		public:
 			int getLine() {
 				return line;
@@ -29,14 +31,18 @@ namespace flock {
 			int getColumn() {
 				return column;
 			}
-			SourceLocation(int line, int column) : line(line), column(column) {}
+			int getSourceChar() {
+				return sourceChar;
+			}
+			SourceLocation(int line, int column, int sourceChar) : line(line), column(column), sourceChar(sourceChar) {}
+			SourceLocation(const SourceLocation& copy) = default;
+			~SourceLocation() = default;
 		};
 
 		class Source {
 		private:
-			std::string text;
-			SourceLocation start, end;
-
+			const std::string text;
+			const SourceLocation start, end;
 		public:
 			SourceLocation getStart() {
 				return start;
@@ -50,127 +56,112 @@ namespace flock {
 			Source(const std::string text, SourceLocation start, SourceLocation end)
 				: text(std::move(text)), start(std::move(start)), end(std::move(end)) {
 			}
+			Source(const Source& copy) = default;
 		};
-
-	
 
 		class Token {
 		protected:
-			Source source;
+			const Source source;
 		public:
 			enum class Type {
 				Eof,
+				Whitespace,
+				Comment,
 				Identifier,
 				Number
 			};
 			virtual ~Token() = default;
-
-			
-			Source  getSource() {
-				return source;
-			}
+			Token(const Token& copy) = default;
+			Token(Source source) : source(std::move(source)) {}
 
 			virtual Type getType() = 0;
 
-			Token(Source source) : source(std::move(source)){}
-
-		};
-
-
-		class EOF_Token : public Token {
-		public:
-			Type getType() override {
-				return Type::Eof;
+			std::string getTypeName() {
+				switch (getType()) {
+				case Type::Eof :
+					return "Eof";
+				case Type::Whitespace:
+					return "Whitespace";
+				case Type::Comment:
+					return "Comment";
+				case Type::Identifier:
+					return "Identifier";
+				case Type::Number:
+					return "Number";
+				default:
+					return "Unknown";
+				}
 			}
 
-			EOF_Token(Source source) : Token(source) {}
-		};
-
-		class Identifier_Token : public Token {
-		public:
-			Type getType() override {
-				return Type::Identifier;
+			Source getSource() {
+				return source;
 			}
-			Identifier_Token(Source source) : Token(source) {}
 		};
 
-		class Number_Token : public Token {
+		class TypedToken : public Token {
+		protected:
+			const Type type;
 		public:
+			TypedToken(const TypedToken& copy) = default;
 			Type getType() override {
-				return Type::Number;
+				return type;
 			}
-			Number_Token(Source source) : Token(source) {}
+
+			TypedToken(Source source, Type type) : Token(source), type(type) {}
+
 		};
 
-
-		class Tokenizer{
+		class Tokenizer {
+		public:
+			//todo make this a char stream.
+			Tokenizer();
+			virtual ~Tokenizer() = default;
+			std::unique_ptr<Token> nextToken();
 		private:
 			int line;
 			int column;
 			int char_at;
+			std::deque<SourceLocation> charQueue;
+			int current();
+			SourceLocation currentLocation();
+			void pop();
+			int next();
+			int next(int idx);
+			SourceLocation nextLocation();
+			SourceLocation nextLocation(int idx);
+			void advance(std::string& sourceString);
+			void fetch();
+		};
 
-			int getNextChar() {
-				int nextChar = getchar();
-				char_at++;
-				if (nextChar == '\n' || nextChar == '\r') {
-					line++;
-					column = 0;
-				} else {
-					column++;
-				}
-				return nextChar;
-			}
 
-
+		class EOF_Token : public TypedToken {
 		public:
 
-			//todo make this a char stream.
-			Tokenizer() {
-				line = 1;
-				column = 0;
-				char_at = 0;
-			}
-			virtual ~Tokenizer() = default;
-
-			std::unique_ptr<Token> nextToken() {
-				int currentChar = ' ';
-				while (isspace(currentChar)) {
-					currentChar = getNextChar();
-				}
-				SourceLocation start(line, column);
-				SourceLocation end = start;
-
-				if (isalpha(currentChar)) {
-					std::string identifierString;
-					identifierString = currentChar;
-					
-					// TODO support underscores
-					while (isalnum((currentChar = getNextChar()))) {
-						identifierString += currentChar;
-						end = SourceLocation(line, column);
-					}
-					Source mySource(identifierString, start, end);
-					Identifier_Token identifier_token(mySource);
-					return std::make_unique<Identifier_Token>(identifier_token);
-					//TODO do keyword detection here.
-				}
-				if (isdigit(currentChar) || currentChar == '.') { // Number: [0-9.]+
-					std::string numberString;
-					do {
-						numberString += currentChar;
-						end = SourceLocation(line, column);
-						currentChar = getNextChar();
-					} while (isdigit(currentChar) || currentChar == '.');
-					Source mySource(numberString, start, end);
-					Number_Token number_token(mySource);
-					return std::make_unique<Number_Token>(number_token);
-				}
-
-				Source mySource("unknown", start, end);
-				EOF_Token eof_token(mySource);
-				return std::make_unique<EOF_Token>(eof_token);
-			}
+			EOF_Token(Source source) : TypedToken(source, Type::Eof) {}
 		};
+
+		class Whitespace_Token : public TypedToken  {
+		public:
+
+			Whitespace_Token(Source source) : TypedToken(source, Type::Whitespace) {}
+		};
+
+		class Comment_Token : public TypedToken {
+		public:
+
+			Comment_Token(Source source) : TypedToken(source, Type::Comment) {}
+		};
+
+		class Identifier_Token : public TypedToken {
+		public:
+			Identifier_Token(Source source) : TypedToken(source, Type::Identifier) {}
+		};
+
+		class Number_Token : public TypedToken {
+		public:
+			Number_Token(Source source) : TypedToken(source, Type::Number) {}
+		};
+
 	}
 }
 
