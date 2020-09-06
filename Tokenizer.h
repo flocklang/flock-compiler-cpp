@@ -52,16 +52,17 @@ namespace flock {
 			}
 		};
 
-		enum class Token_Type {
-			Eof,
-			Identifier,
-			Number
-		};
+	
 
 		class Token {
 		protected:
 			Source source;
 		public:
+			enum class Type {
+				Eof,
+				Identifier,
+				Number
+			};
 			virtual ~Token() = default;
 
 			
@@ -69,7 +70,7 @@ namespace flock {
 				return source;
 			}
 
-			virtual Token_Type getType() = 0;
+			virtual Type getType() = 0;
 
 			Token(Source source) : source(std::move(source)){}
 
@@ -78,8 +79,8 @@ namespace flock {
 
 		class EOF_Token : public Token {
 		public:
-			Token_Type getType() override {
-				return Token_Type::Eof;
+			Type getType() override {
+				return Type::Eof;
 			}
 
 			EOF_Token(Source source) : Token(source) {}
@@ -87,16 +88,16 @@ namespace flock {
 
 		class Identifier_Token : public Token {
 		public:
-			Token_Type getType() override {
-				return Token_Type::Identifier;
+			Type getType() override {
+				return Type::Identifier;
 			}
 			Identifier_Token(Source source) : Token(source) {}
 		};
 
 		class Number_Token : public Token {
 		public:
-			Token_Type getType() override {
-				return Token_Type::Number;
+			Type getType() override {
+				return Type::Number;
 			}
 			Number_Token(Source source) : Token(source) {}
 		};

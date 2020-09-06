@@ -34,7 +34,7 @@ static void MainLoop() {
 
         std::unique_ptr<Token> token = tokenizer.nextToken();
         switch (token->getType()) {
-        case Token_Type::Eof:
+        case Token::Type::Eof:
             fprintf(stderr, "EOF");
             return;
         default:
