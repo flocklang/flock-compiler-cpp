@@ -32,14 +32,13 @@ static void MainLoop() {
 	while (true) {
 		fprintf(stderr, "\nready> ");
 
-		std::unique_ptr<Token> token = tokenizer.nextToken();
+		std::unique_ptr<TypedToken> token = tokenizer.nextToken();
 
-		fprintf(stderr, "type:%s, value:'%s', start:{line: %i, column: %i}, end:{line: %i, column: %i}",
-			token->getTypeName().c_str(), token->getSource().getText().c_str(),
-			token->getSource().getStart().getLine(), token->getSource().getStart().getColumn(),
-			token->getSource().getEnd().getLine(), token->getSource().getEnd().getColumn());
+		std::cout << "\n" << *token;
+
 		switch (token->getType()) {
 		case Token::Type::Eof:
+		//case Token::Type::NewLine:
 			return;
 		default:
 			break;

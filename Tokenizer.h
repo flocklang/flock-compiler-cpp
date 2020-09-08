@@ -16,6 +16,7 @@
 #include <string>
 #include <memory>
 #include <deque>
+#include <iostream>
 
 namespace flock {
 	namespace tokenizer {
@@ -37,6 +38,7 @@ namespace flock {
 			SourceLocation(int line, int column, int sourceChar) : line(line), column(column), sourceChar(sourceChar) {}
 			SourceLocation(const SourceLocation& copy) = default;
 			~SourceLocation() = default;
+			friend std::ostream& operator<<(std::ostream& os, const SourceLocation& sourceLocation);
 		};
 
 		class Source {
@@ -57,6 +59,7 @@ namespace flock {
 				: text(std::move(text)), start(std::move(start)), end(std::move(end)) {
 			}
 			Source(const Source& copy) = default;
+			friend std::ostream& operator<<(std::ostream & os, const Source& source);
 		};
 
 		class Token {
@@ -66,6 +69,7 @@ namespace flock {
 			enum class Type {
 				Eof,
 				Whitespace,
+				NewLine,
 				Comment,
 				Identifier,
 				Number
@@ -73,15 +77,17 @@ namespace flock {
 			virtual ~Token() = default;
 			Token(const Token& copy) = default;
 			Token(Source source) : source(std::move(source)) {}
-
+			friend std::ostream& operator<<(std::ostream& os, const Token& token);
 			virtual Type getType() = 0;
 
-			std::string getTypeName() {
-				switch (getType()) {
-				case Type::Eof :
+			friend std::string getTypeNameFor(Type type) {
+				switch (type) {
+				case Type::Eof:
 					return "Eof";
 				case Type::Whitespace:
 					return "Whitespace";
+				case Type::NewLine:
+					return "NewLine";
 				case Type::Comment:
 					return "Comment";
 				case Type::Identifier:
@@ -91,6 +97,9 @@ namespace flock {
 				default:
 					return "Unknown";
 				}
+			}
+			std::string getTypeName() {
+				return getTypeNameFor(getType());
 			}
 
 			Source getSource() {
@@ -108,6 +117,7 @@ namespace flock {
 			}
 
 			TypedToken(Source source, Type type) : Token(source), type(type) {}
+			friend std::ostream& operator<<(std::ostream& os, const TypedToken& token);
 
 		};
 
@@ -116,23 +126,30 @@ namespace flock {
 			//todo make this a char stream.
 			Tokenizer();
 			virtual ~Tokenizer() = default;
-			std::unique_ptr<Token> nextToken();
+			std::unique_ptr<TypedToken> nextToken();
 		private:
 			int line;
 			int column;
 			int char_at;
 			std::deque<SourceLocation> charQueue;
-			int current();
-			SourceLocation currentLocation();
-			void pop();
-			int next();
-			int next(int idx);
-			SourceLocation nextLocation();
-			SourceLocation nextLocation(int idx);
-			void advance(std::string& sourceString);
 			void fetch();
+
+			SourceLocation poll(const int idx = 0);
+			int pollChar(const int idx = 0);
+			std::string pollString( const int amount = 1, const int startIdx = 0);
+			std::string pop(const int amount = 1);
 		};
 
+
+
+		static bool isnewline(const int character)
+		{
+			return isspace(character) && !isblank(character);
+		}
+		static bool isequal(const std::string from, const std::string to)
+		{
+			return from.compare(to) == 0;
+		}
 
 		class EOF_Token : public TypedToken {
 		public:
@@ -144,6 +161,12 @@ namespace flock {
 		public:
 
 			Whitespace_Token(Source source) : TypedToken(source, Type::Whitespace) {}
+		};
+
+		class NewLine_Token : public TypedToken {
+		public:
+
+			NewLine_Token(Source source) : TypedToken(source, Type::NewLine) {}
 		};
 
 		class Comment_Token : public TypedToken {

@@ -31,47 +31,43 @@ namespace flock {
 				column = 0;
 			}
 		}
-
-		int Tokenizer::current() {
-			return currentLocation().getSourceChar();
-		}
-
-		SourceLocation Tokenizer::currentLocation() {
-			if (charQueue.empty()) {
-				fetch();
-			}
-			return charQueue.front();
-		}
-
-		void Tokenizer::pop() {
-			if (!charQueue.empty()) {
-				charQueue.pop_front();
-			}
-		}
-		int Tokenizer::next() {
-			return nextLocation().getSourceChar();
-		}
-		int Tokenizer::next(int idx) {
-			return nextLocation(idx).getSourceChar();
-		}
-		SourceLocation Tokenizer::nextLocation() {
-			return nextLocation(1);
-		}
-		SourceLocation Tokenizer::nextLocation(int idx) {
-			if (idx == 0) {
-				return currentLocation();
-			}
-			for(int i = charQueue.size(); i <= idx;i++) {
+		SourceLocation Tokenizer::poll(const int idx) {
+			for (int i = charQueue.size(); i <= idx; i++) {
 				fetch();
 			}
 			return charQueue.at(idx);
 		}
 
-		void Tokenizer::advance(std::string& sourceString)
-		{
-			sourceString += current();
-			pop();
+		int Tokenizer::pollChar(const int idx) {
+			return poll(idx).getSourceChar();
 		}
+
+		/**
+		* Start Index inclusive,
+		*/
+		std::string Tokenizer::pollString(const int amount, const int startIdx) {
+			const int endIdx = startIdx + amount;
+			std::string toCollect;
+			for (int i = std::min(startIdx, (int)charQueue.size()); i < endIdx; i++) {
+				if (i >= charQueue.size()) {
+					fetch();
+				}
+				if (i >= startIdx) {
+					toCollect += charQueue.at(i).getSourceChar();
+				}
+			}
+			return toCollect;
+		}
+
+		std::string Tokenizer::pop(const int amount) {
+			std::string sourceString;
+			sourceString += pollString(amount);
+			if (!charQueue.empty()) {
+				charQueue.erase(charQueue.begin(), std::min(charQueue.begin() + amount, charQueue.end()));
+			}
+			return sourceString;
+		}
+
 
 		//todo make this a char stream.
 		Tokenizer::Tokenizer() {
@@ -80,73 +76,102 @@ namespace flock {
 			char_at = 0;
 		}
 
-		std::unique_ptr<Token> Tokenizer::nextToken() {
-			SourceLocation start = currentLocation();
+		std::unique_ptr<TypedToken> Tokenizer::nextToken() {
+			const SourceLocation start = poll();
+			if (pollChar() == EOF) {
+
+				Source mySource("", start, start);
+				EOF_Token eof_Token(mySource);
+				return std::make_unique<EOF_Token>(eof_Token);
+			}
 			std::string sourceString;
-
-			if (isspace(current())) {
-				while (isspace(current())) {
-					advance(sourceString);
+			if (isnewline(pollChar())) {
+				while (isnewline(pollChar())) {
+					sourceString += pop();
 				}
 
-				Source mySource(sourceString, start, currentLocation());
-				Whitespace_Token whitepsace_Token(mySource);
-				return std::make_unique<Whitespace_Token>(whitepsace_Token);
+				Source mySource(sourceString, start, poll());
+				NewLine_Token newLine_Token(mySource);
+				return std::make_unique<NewLine_Token>(newLine_Token);
 			}
-			if (current() == '/') {
-				int nextChar = next();
-				if (nextChar == '/') {
-					int currentLine = currentLocation().getLine();
-					advance(sourceString);
-					do {
-						advance(sourceString);
-					} while (currentLine == nextLocation().getLine());
-					advance(sourceString);
-
-					Source mySource(sourceString, start, currentLocation());
-					Comment_Token comment_Token(mySource);
-					return std::make_unique<Comment_Token>(comment_Token);
+			if (isblank(pollChar())) {
+				while (isblank(pollChar())) {
+					sourceString += pop();
 				}
-				else if (nextChar == '*') {
 
-					advance(sourceString);
-					do {
-						advance(sourceString);
-					} while (!(current() == '*' && next() == '/'));
-					advance(sourceString); 
-					advance(sourceString);
-
-					Source mySource(sourceString, start, currentLocation());
-					Comment_Token comment_Token(mySource);
-					return std::make_unique<Comment_Token>(comment_Token);
+				Source mySource(sourceString, start, poll());
+				Whitespace_Token whitespace_Token(mySource);
+				return std::make_unique<Whitespace_Token>(whitespace_Token);
+			}
+			if (isequal(pollString(2), "//")) {
+				sourceString += pop(2);
+				while (!isnewline(pollChar())) {
+					sourceString += pop();
 				}
+
+				Source mySource(sourceString, start, poll());
+				Comment_Token comment_Token(mySource);
+				return std::make_unique<Comment_Token>(comment_Token);
+			}
+			if (isequal(pollString(2), "/*")) {
+				sourceString += pop(2);
+				while (!isequal(pollString(2), "*/")) {
+					sourceString += pop();
+				}
+				sourceString += pop(2);
+
+				Source mySource(sourceString, start, poll());
+				Comment_Token comment_Token(mySource);
+				return std::make_unique<Comment_Token>(comment_Token);
 			}
 
-			if (isalpha(current())) {
+			if (isalpha(pollChar())) {
 
 				// TODO support underscores
-				while (isalnum(current())) {
-					advance(sourceString);
+				while (isalnum(pollChar())) {
+					sourceString += pop();
 				}
-				Source mySource(sourceString, start, currentLocation());
+				Source mySource(sourceString, start, poll());
 				Identifier_Token identifier_token(mySource);
 				return std::make_unique<Identifier_Token>(identifier_token);
 				//TODO do keyword detection here.
 			}
-			if (isdigit(current()) || current() == '.') { // Number: [0-9.]+
-				while(isdigit(current()) || current() == '.') {
-					advance(sourceString);
+			if (isdigit(pollChar()) || pollChar() == '.') { // Number: [0-9.]+
+				while (isdigit(pollChar()) || pollChar() == '.') {
+					sourceString += pop();
 				};
-				Source mySource(sourceString, start, currentLocation());
+				Source mySource(sourceString, start, poll());
 				Number_Token number_token(mySource);
 				return std::make_unique<Number_Token>(number_token);
 			}
 
-			Source mySource("unknown", start, currentLocation());
+			Source mySource("unknown", start, poll());
 			EOF_Token eof_token(mySource);
 			return std::make_unique<EOF_Token>(eof_token);
 		}
 
-	};
+		std::ostream& operator<<(std::ostream& os, const SourceLocation& sourceLocation)
+		{
+			return os << "line: " << sourceLocation.line << ", column: " << sourceLocation.column << "";
+		}
+		//type:%s, value:'%s', start:{line: %i, column: %i}, end:{line: %i, column: %i}
+		std::ostream& operator<<(std::ostream& os, const Source& source)
+		{
+			return os << "start: [" << source.start << "], end: [" << source.end << "], text: \"" << source.text << "\"";
+		}
+
+		//type:%s, value:'%s', start:{line: %i, column: %i}, end:{line: %i, column: %i}
+		std::ostream& operator<<(std::ostream& os, const Token& token)
+		{
+			return os << "source: [" << token.source << "]";
+		}
+
+
+		std::ostream& operator<<(std::ostream& os, const TypedToken& token)
+		{
+			return os << "type: " << getTypeNameFor(token.type) << ", source: [" << token.source << "]";
+		}
+
+	}
 }
 
