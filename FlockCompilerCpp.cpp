@@ -23,16 +23,18 @@
 #include <memory>
 #include "Tokenizer.h"
 
+using namespace flock;
 using namespace flock::tokenizer;
 
 
 /// top ::= definition | external | expression | ';'
 static void MainLoop() {
-	Tokenizer tokenizer;
+	ConsoleSupplier consoleSupplier;
+	Tokenizer tokenizer(consoleSupplier);
 	while (true) {
 		fprintf(stderr, "\nready> ");
 
-		std::unique_ptr<TypedToken> token = tokenizer.nextToken();
+		std::unique_ptr<TypedToken> token = tokenizer.supply();
 
 		std::cout << "\n" << *token;
 

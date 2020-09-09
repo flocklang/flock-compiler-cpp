@@ -17,11 +17,13 @@
 #include "Tokenizer.h"
 #include <iostream>
 namespace flock {
+
+
 	namespace tokenizer {
 
 		void Tokenizer::fetch()
 		{
-			int nextChar = getchar();
+			int nextChar = supplier.supply();
 			char_at++;
 			column++;
 
@@ -69,20 +71,22 @@ namespace flock {
 		}
 
 
-		//todo make this a char stream.
-		Tokenizer::Tokenizer() {
+
+		Tokenizer::Tokenizer(Supplier<int>& supplier) :supplier(supplier) {
+
 			line = 1;
 			column = 0;
 			char_at = 0;
 		}
 
-		std::unique_ptr<TypedToken> Tokenizer::nextToken() {
+		// Basic tokenizer
+		TypedToken Tokenizer::nextToken() {
 			const SourceLocation start = poll();
 			if (pollChar() == EOF) {
 
 				Source mySource("", start, start);
 				EOF_Token eof_Token(mySource);
-				return std::make_unique<EOF_Token>(eof_Token);
+				return EOF_Token(eof_Token);
 			}
 			std::string sourceString;
 			if (isnewline(pollChar())) {
@@ -92,7 +96,7 @@ namespace flock {
 
 				Source mySource(sourceString, start, poll());
 				NewLine_Token newLine_Token(mySource);
-				return std::make_unique<NewLine_Token>(newLine_Token);
+				return NewLine_Token(newLine_Token);
 			}
 			if (isblank(pollChar())) {
 				while (isblank(pollChar())) {
@@ -101,7 +105,7 @@ namespace flock {
 
 				Source mySource(sourceString, start, poll());
 				Whitespace_Token whitespace_Token(mySource);
-				return std::make_unique<Whitespace_Token>(whitespace_Token);
+				return Whitespace_Token(whitespace_Token);
 			}
 			if (isequal(pollString(2), "//")) {
 				sourceString += pop(2);
@@ -111,7 +115,7 @@ namespace flock {
 
 				Source mySource(sourceString, start, poll());
 				Comment_Token comment_Token(mySource);
-				return std::make_unique<Comment_Token>(comment_Token);
+				return Comment_Token(comment_Token);
 			}
 			if (isequal(pollString(2), "/*")) {
 				sourceString += pop(2);
@@ -122,32 +126,46 @@ namespace flock {
 
 				Source mySource(sourceString, start, poll());
 				Comment_Token comment_Token(mySource);
-				return std::make_unique<Comment_Token>(comment_Token);
+				return Comment_Token(comment_Token);
 			}
 
-			if (isalpha(pollChar())) {
+			if (isalpha(pollChar()) || pollChar() == '_') { // [A-Z_]
 
-				// TODO support underscores
-				while (isalnum(pollChar())) {
+				while (isalnum(pollChar()) || pollChar() == '_') { // [A-Z0-9_]+
 					sourceString += pop();
 				}
 				Source mySource(sourceString, start, poll());
-				Identifier_Token identifier_token(mySource);
-				return std::make_unique<Identifier_Token>(identifier_token);
-				//TODO do keyword detection here.
+				String_Token identifier_token(mySource);
+				return String_Token(identifier_token);
 			}
-			if (isdigit(pollChar()) || pollChar() == '.') { // Number: [0-9.]+
-				while (isdigit(pollChar()) || pollChar() == '.') {
+			if (isdigit(pollChar())) { // [0-9.]+  we support [12.34, 1234] but not [.1234]
+				bool isDecimal = false;
+				sourceString += pop();
+				for(int currentChar = pollChar() ; isdigit(currentChar) || currentChar == '.' ; currentChar = pollChar()){// [0-9.]+
+					if (currentChar == '.') {
+						if (isDecimal || !isdigit(pollChar(1))) {
+							break;
+						}
+						isDecimal = true;
+					}
 					sourceString += pop();
-				};
+				}
 				Source mySource(sourceString, start, poll());
 				Number_Token number_token(mySource);
-				return std::make_unique<Number_Token>(number_token);
+				return Number_Token(number_token);
 			}
 
-			Source mySource("unknown", start, poll());
+			if (ispunct(pollChar())) { // everything else
+				sourceString += pop();
+				Source mySource(sourceString, start, start);
+				Symbol_Token symbol_token(mySource);
+				return Symbol_Token(symbol_token);
+			}
+
+			// Safety
+			Source mySource(pop(), start, start);
 			EOF_Token eof_token(mySource);
-			return std::make_unique<EOF_Token>(eof_token);
+			return EOF_Token(eof_token);
 		}
 
 		std::ostream& operator<<(std::ostream& os, const SourceLocation& sourceLocation)

@@ -19,6 +19,32 @@
 #include <iostream>
 
 namespace flock {
+
+
+	static bool isnewline(const int character)
+	{
+		return isspace(character) && !isblank(character);
+	}
+
+	static bool isequal(const std::string from, std::string to)
+	{
+		return from.compare(to) == 0;
+	}
+
+	template <class T>
+	class Supplier {
+	public:
+		virtual T supply() = 0;
+	};
+
+
+	class ConsoleSupplier : public Supplier<int> {
+	public:
+		int supply() override {
+			return getchar();
+		};
+	};
+
 	namespace tokenizer {
 		class SourceLocation {
 		private:
@@ -71,8 +97,9 @@ namespace flock {
 				Whitespace,
 				NewLine,
 				Comment,
-				Identifier,
-				Number
+				String,
+				Number,
+				Symbol
 			};
 			virtual ~Token() = default;
 			Token(const Token& copy) = default;
@@ -90,10 +117,12 @@ namespace flock {
 					return "NewLine";
 				case Type::Comment:
 					return "Comment";
-				case Type::Identifier:
-					return "Identifier";
+				case Type::String:
+					return "String";
 				case Type::Number:
 					return "Number";
+				case Type::Symbol:
+					return "Symbol";
 				default:
 					return "Unknown";
 				}
@@ -121,19 +150,22 @@ namespace flock {
 
 		};
 
-		class Tokenizer {
+		class Tokenizer : public Supplier<std::unique_ptr<TypedToken>> {
 		public:
-			//todo make this a char stream.
-			Tokenizer();
+			Tokenizer(Supplier<int>& supplier);
 			virtual ~Tokenizer() = default;
-			std::unique_ptr<TypedToken> nextToken();
+			std::unique_ptr<TypedToken> supply() override {
+				return std::make_unique<TypedToken>(nextToken());
+			}
 		private:
 			int line;
 			int column;
 			int char_at;
+			Supplier<int> &supplier;
 			std::deque<SourceLocation> charQueue;
 			void fetch();
 
+			TypedToken nextToken();
 			SourceLocation poll(const int idx = 0);
 			int pollChar(const int idx = 0);
 			std::string pollString( const int amount = 1, const int startIdx = 0);
@@ -141,15 +173,6 @@ namespace flock {
 		};
 
 
-
-		static bool isnewline(const int character)
-		{
-			return isspace(character) && !isblank(character);
-		}
-		static bool isequal(const std::string from, const std::string to)
-		{
-			return from.compare(to) == 0;
-		}
 
 		class EOF_Token : public TypedToken {
 		public:
@@ -175,14 +198,19 @@ namespace flock {
 			Comment_Token(Source source) : TypedToken(source, Type::Comment) {}
 		};
 
-		class Identifier_Token : public TypedToken {
+		class String_Token : public TypedToken {
 		public:
-			Identifier_Token(Source source) : TypedToken(source, Type::Identifier) {}
+			String_Token(Source source) : TypedToken(source, Type::String) {}
 		};
 
 		class Number_Token : public TypedToken {
 		public:
 			Number_Token(Source source) : TypedToken(source, Type::Number) {}
+		};
+
+		class Symbol_Token : public TypedToken {
+		public:
+			Symbol_Token(Source source) : TypedToken(source, Type::Symbol) {}
 		};
 
 	}
