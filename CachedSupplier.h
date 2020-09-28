@@ -32,7 +32,7 @@ namespace flock {
 
             std::shared_ptr<T> poll(const int idx = 0) {
                 for (int i = store.size(); i <= idx; i++) {
-                    auto value = supply();
+                    auto value = this->supply();
                     if (!value) {
                         return nullptr;
                     }
@@ -48,7 +48,7 @@ namespace flock {
 
             std::shared_ptr<T> pop() {
                 if (store.empty()) {
-                    auto value = supply();
+                    auto value = this->supply();
                     if (!value) {
                         return nullptr;
                     }

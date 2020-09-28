@@ -149,7 +149,6 @@
   <ItemGroup>
     <ClCompile Include="FlockCompilerCpp.cpp" />
     <ClCompile Include="Source.cpp" />
-    <ClCompile Include="Token.cpp" />
     <ClCompile Include="old_Tokenizer.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -166,6 +165,7 @@
     <ClInclude Include="CompilerFix.h" />
     <ClInclude Include="FileCharSupplier.h" />
     <ClInclude Include="LocationSupplier.h" />
+    <ClInclude Include="RawToken.h" />
     <ClInclude Include="Source.h" />
     <ClInclude Include="Supplier.h" />
     <ClInclude Include="Token.h" />

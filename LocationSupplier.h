@@ -32,26 +32,25 @@ namespace flock {
 				if (!option) {
 					return nullptr;
 				}
-				std::shared_ptr<Range> range = std::make_shared<Range>(Range(*option));
+				Range * range =  new Range(option);
 				int nextId = startIdx + 1;
 				int count = amount - 1;
 				while (count-- > 0) {
 					auto option = poll(nextId++);
 
 					if (!option) {
-						return range;
+						return std::make_shared<Range>(*range);
 					}
-					Range newRange(*range,*option);
-					range.reset(&newRange);
+					range = new Range(*range,option);
 
 				}
-				return range;
+				return std::make_shared<Range>(*range);
 			};
 
 			std::shared_ptr<Location> supply() override
 			{
 				int next = charSupplier->supply();
-				if (next == -1) {
+				if (next == EOF) {
 					return nullptr;
 				}
 				if (previous ) {

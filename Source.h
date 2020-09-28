@@ -53,35 +53,60 @@ namespace flock {
 		};
 
 		struct Range {
-			Range(const int character) : Range{ Location(character) } {};
-			Range(const Location start) : start{ start }, end{ start }, source{ std::to_string(start.character) } {};
-			Range(const Location start, const Location end) : start{ start }, end{ end }, source{ std::to_string(start.character) + std::to_string(end.character) } {};
-			Range(const Range start, const Location end) : start{ start.start }, end{ end }, source(start.source + std::to_string(end.character)) {};
-			Range(const Range start, const Range end) : start{ start.start }, end{ end.end }, source(start.source + end.source) {};
+			Range(const int character) : Range{ std::make_shared<Location>(Location(character)) } {};
+			Range(const std::shared_ptr < Location> start) : start{ start }, end{ start } {
+				source.push_back(start->character); 
+			};
+			Range(const std::shared_ptr < Location> start, const std::shared_ptr < Location> end) : start{ start }, end{ end } {
+				source.push_back(start->character);
+				source.push_back(end->character);
+			};
+			Range(const Range start, const std::shared_ptr < Location> end) : start{ start.start }, end{ end } {
+				source.append(start.source);
+				source.push_back(end->character);
+			};
+			Range(const Range start, const Range end) : start{ start.start }, end{ end.end } {
+				source.append(start.source);
+				source.append(end.source);
+			};
 
-			Range(const Range& other) : start(other.start), end(other.end), source(other.source) {}
+			Range(const Range& other) : start(other.start), end(other.end) {
+				source.append(other.source);
+			};
 
-			const Location start;
-			const Location end;
-			const std::string source;
+			const std::shared_ptr<Location> start;
+			const std::shared_ptr<Location> end;
+			std::string source;
 
 			friend std::ostream& operator<<(std::ostream& os, const Range& range) {
-				return os << "start: {line: " << range.start.line << ", column: " << range.start.column << ", position: " << range.start.position << "}"
-					<< ", end: {line: " << range.end.line << ", column: " << range.end.column << ", position: " << range.end.position << "}, source: " << range.source;
+				return os << "start: {line: " << range.start->line << ", column: " << range.start->column << ", position: " << range.start->position << "}"
+					<< ", end: {line: " << range.end->line << ", column: " << range.end->column << ", position: " << range.end->position << "}, source: " << range.source;
+			};
+
+			std::string toStringNoText() {
+				std::string ret;
+				ret.append("start: {line: ").append(std::to_string(start->line))
+					.append(", column: ").append(std::to_string(start->column))
+					.append(", position: ").append(std::to_string(start->position))
+					.append("}, end: {line: ").append(std::to_string(end->line))
+					.append(", column: ").append(std::to_string(end->column))
+					.append(", position: ").append(std::to_string(end->position))
+					.append("}, sourceLength: ").append(std::to_string(source.size()));
+				return ret;
 			};
 		};
 
-		/*
-			 * All of these operator overloads presume the end location or range immediately follows the start location or range,
-			 * a Non Sequential locations exception is thrown if this is not true.
-			 */
-		Range operator+(const Location& start, Location& end);
-		Range operator+(const Range& start, Location& end);
-		Range operator+(const Range& start, Range& end);
-		Range operator+(const Location& start, const int character);
-		Range operator+(const Range& start, const int character);
-		bool operator==(const Location& first, Location& second);
-		bool operator==(const Range& first, Range& second);
+		///*
+		//	 * All of these operator overloads presume the end location or range immediately follows the start location or range,
+		//	 * a Non Sequential locations exception is thrown if this is not true.
+		//	 */
+		//Range operator+(const Location& start, Location& end);
+		//Range operator+(const Range& start, Location& end);
+		//Range operator+(const Range& start, Range& end);
+		//Range operator+(const Location& start, const int character);
+		//Range operator+(const Range& start, const int character);
+		//bool operator==(const Location& first, Location& second);
+		//bool operator==(const Range& first, Range& second);
 	}
 }
 #endif

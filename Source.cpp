@@ -14,53 +14,53 @@
  * limitations under the License.
  */
 
-#include "Source.h"
-namespace flock {
-	namespace source {
-		Range operator+(const Location& start, const Location& end) {
-			if (start.position + 1 != end.position) {
-				throw "Non Sequential locations";
-			}
-			return Range(start, end);
-		};
-		Range operator+(const Range& start, const Location& end) {
-			if (start.end.position + 1 != end.position) {
-				throw "Non Sequential locations";
-			}
-			return Range(start, end);
-		}
-		Range operator+=(const Range& start, const Location& end) {
-			return start + end;
-		}
-		Range operator+(const Range& start, const Range& end) {
-			if (start.end.position + 1 != end.start.position) {
-				throw "Non Sequential locations";
-			}
-			return Range(start, end);
-		}
-		Range operator+=(const Range& start, const Range& end) {
-			return start + end;
-		}
-		Range operator+(const Location& start, const int character)
-		{
-			return start + Location::next(start, character);
-		}
-		Range operator+(const Range& start, const int character)
-		{
-			return start + Location::next(start.end, character);
-		}
-		Range operator+=(const Range& start, const int character) {
-			return start + character;
-		}
-		bool operator==(const Location& first, const Location& second) {
-			return first.line == second.line && first.column == second.column
-				&& first.position == second.position && first.character == second.character;
-		};
-
-		bool operator==(const Range& first, const Range& second) {
-			return first.start == second.start
-				&& first.end == second.end
-				&& isequal(first.source, second.source);
-		};
-	}
-}
+//#include "Source.h"
+//namespace flock {
+//	namespace source {
+//		Range operator+(const Location& start, const Location& end) {
+//			if (start.position + 1 != end.position) {
+//				throw "Non Sequential locations";
+//			}
+//			return Range(start, end);
+//		};
+//		Range operator+(const Range& start, const Location& end) {
+//			if (start.end.position + 1 != end.position) {
+//				throw "Non Sequential locations";
+//			}
+//			return Range(start, end);
+//		}
+//		Range operator+=(const Range& start, const Location& end) {
+//			return start + end;
+//		}
+//		Range operator+(const Range& start, const Range& end) {
+//			if (start.end.position + 1 != end.start.position) {
+//				throw "Non Sequential locations";
+//			}
+//			return Range(start, end);
+//		}
+//		Range operator+=(const Range& start, const Range& end) {
+//			return start + end;
+//		}
+//		Range operator+(const Location& start, const int character)
+//		{
+//			return start + Location::next(start, character);
+//		}
+//		Range operator+(const Range& start, const int character)
+//		{
+//			return start + Location::next(start.end, character);
+//		}
+//		Range operator+=(const Range& start, const int character) {
+//			return start + character;
+//		}
+//		bool operator==(const Location& first, const Location& second) {
+//			return first.line == second.line && first.column == second.column
+//				&& first.position == second.position && first.character == second.character;
+//		};
+//
+//		bool operator==(const Range& first, const Range& second) {
+//			return first.start == second.start
+//				&& first.end == second.end
+//				&& isequal(first.source, second.source);
+//		};
+//	}
+//}

@@ -31,16 +31,16 @@ namespace flock {
                 if ((*myfile).is_open()) {
                     if ((*myfile).eof()) {
                         (*myfile).close();
-                        return  -1;
+                        return  EOF;
                     }
                     // We may want to buffer for effeciency
                     int next = (*myfile).get();
-                    if (next == -1) {
+                    if (next == EOF) {
                         (*myfile).close();
                     }
                     return next;
                 }
-                return -1;
+                return EOF;
             }
             FileCharSupplier(std::string fileName) : fileName (fileName){ }
         private:
