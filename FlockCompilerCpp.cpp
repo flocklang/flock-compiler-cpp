@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 John Orlando Keleshian Moxley
+ * Copyright 2020 John Orlando Keleshian Moxley All Rights Reserved
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,32 +14,35 @@
  * limitations under the License.
  */
 
- // FlockCompilerCpp.cpp : This file contains the 'main' function. Program execution begins and ends there.
+// FlockCompilerCpp.cpp : This file contains the 'main' function. Program execution begins and ends there.
  // Fixes for specific compilers and IDEs go in here, try not to polute the rest of the code.
 #include "CompilerFix.h"
 
 #include <iostream>
 #include <string>
 #include <memory>
-#include "Tokenizer.h"
+//#include "old_Tokenizer.h"
+#include "Token.h"
+#include "ConsoleCharSupplier.h"
 
 using namespace flock;
-using namespace flock::tokenizer;
+using namespace flock::token;
 
 
 /// top ::= definition | external | expression | ';'
 static void MainLoop() {
-	ConsoleSupplier consoleSupplier;
-	Tokenizer tokenizer(consoleSupplier);
+	//ConsoleSupplier consoleSupplier;
+	ConsoleCharSupplier consoleSupplier;
+	Tokenizer tokenizer(&consoleSupplier);
 	while (true) {
 		fprintf(stderr, "\nready> ");
 
-		std::unique_ptr<TypedToken> token = tokenizer.supply();
-
+		//std::unique_ptr<TypedToken> token = tokenizer.supply();
+		std::shared_ptr<Token> token = tokenizer.supply();
 		std::cout << "\n" << *token;
 
 		switch (token->getType()) {
-		case Token::Type::Eof:
+		case Type::Eof:
 		//case Token::Type::NewLine:
 			return;
 		default:

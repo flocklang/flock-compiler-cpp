@@ -13,11 +13,4 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef FLOCK_COMPILER_COMPILER_FIX_H
-#define FLOCK_COMPILER_COMPILER_FIX_H
- // Microsoft Visual Studio Fixes for LLVM
-#ifdef _MSC_VER
-#pragma warning(disable: 4146) // unary minus operator applied to unsigned type, result still unsigned
-#pragma warning(disable: 4996) // Turns of deprecated method compiler warnings.
-#endif
-#endif
+#include "Token.h"

@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 John Orlando Keleshian Moxley
+ * Copyright 2020 John Orlando Keleshian Moxley, All Rights Reserved
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,23 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+#ifndef FLOCK_COMPILER_OLD_TOKENIZER_H
+#define FLOCK_COMPILER_OLD_TOKENIZER_H
+
 #include <string>
 #include <memory>
 #include <deque>
 #include <iostream>
+#include "Source.h"
 
 namespace flock {
-
-
-	static bool isnewline(const int character)
-	{
-		return isspace(character) && !isblank(character);
-	}
-
-	static bool isequal(const std::string from, std::string to)
-	{
-		return from.compare(to) == 0;
-	}
 
 	template <class T>
 	class Supplier {
@@ -215,4 +208,4 @@ namespace flock {
 
 	}
 }
-
+#endif

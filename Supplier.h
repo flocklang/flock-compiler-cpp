@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 John Orlando Keleshian Moxley All Rights Reserved
+ * Copyright 2020 John Orlando Keleshian Moxley, All Rights Reserved
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,11 +13,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef FLOCK_COMPILER_COMPILER_FIX_H
-#define FLOCK_COMPILER_COMPILER_FIX_H
- // Microsoft Visual Studio Fixes for LLVM
-#ifdef _MSC_VER
-#pragma warning(disable: 4146) // unary minus operator applied to unsigned type, result still unsigned
-#pragma warning(disable: 4996) // Turns of deprecated method compiler warnings.
-#endif
+
+#ifndef FLOCK_COMPILER_SUPPLIER_H
+#define FLOCK_COMPILER_SUPPLIER_H
+
+namespace flock {
+    namespace supplier {
+
+        template<typename T>
+        class Supplier
+        {
+        public:
+            virtual T supply() = 0;
+        };
+    }
+}
 #endif

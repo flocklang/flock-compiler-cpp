@@ -13,12 +13,27 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="Header Files\Supplier">
+      <UniqueIdentifier>{6d8724af-11b0-4307-8f88-c35ad98e9861}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Source">
+      <UniqueIdentifier>{133dc157-6d16-443e-a678-aac4badcbde5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Util">
+      <UniqueIdentifier>{b26254b4-6bb8-4cff-aee9-4199325eefed}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="FlockCompilerCpp.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Tokenizer.cpp">
+    <ClCompile Include="Token.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="old_Tokenizer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -36,13 +51,38 @@
     <None Include="LICENSE">
       <Filter>Resource Files</Filter>
     </None>
+    <None Include="FlockCompilerCpp.licenseheader" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="CompilerFix.h">
+    <ClInclude Include="Token.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Tokenizer.h">
+    <ClInclude Include="old_Tokenizer.h">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Supplier.h">
+      <Filter>Header Files\Supplier</Filter>
+    </ClInclude>
+    <ClInclude Include="LocationSupplier.h">
+      <Filter>Header Files\Supplier</Filter>
+    </ClInclude>
+    <ClInclude Include="Source.h">
+      <Filter>Header Files\Source</Filter>
+    </ClInclude>
+    <ClInclude Include="Util.h">
+      <Filter>Header Files\Util</Filter>
+    </ClInclude>
+    <ClInclude Include="CompilerFix.h">
+      <Filter>Header Files\Util</Filter>
+    </ClInclude>
+    <ClInclude Include="CachedSupplier.h">
+      <Filter>Header Files\Supplier</Filter>
+    </ClInclude>
+    <ClInclude Include="FileCharSupplier.h">
+      <Filter>Header Files\Supplier</Filter>
+    </ClInclude>
+    <ClInclude Include="ConsoleCharSupplier.h">
+      <Filter>Header Files\Supplier</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
