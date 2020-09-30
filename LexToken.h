@@ -59,9 +59,11 @@ namespace flock {
 
 		class LexToken : public Token<LexType, _sp_vec<RawToken>> {
 		public:
-			LexToken(LexType type, _sp_vec<RawToken> rawtokens) : Token(type, rawtokens) {}
-			LexToken(LexType type, _sp<RawToken> rawToken) : Token(type, tokenAsVector(rawToken)) {}
-			LexToken(LexType type) : Token(type, _sp_vec<RawToken>()) {}
+			LexToken(LexType type, _sp_vec<RawToken> rawtokens) : Token(type, rawtokens) , source(joinRange(rawtokens)){}
+			LexToken(LexType type, _sp<RawToken> rawToken) : LexToken(type, tokenAsVector(rawToken)) {}
+			LexToken(LexType type) : LexToken(type, _sp_vec<RawToken>()) {}
+
+			_sp<Range> source;
 
 			friend ostream& operator<<(ostream& os, LexToken& token) {
 
@@ -70,7 +72,7 @@ namespace flock {
 				case LexType::Eof:
 				case LexType::Whitespace:
 				case LexType::NewLine:
-					return os <<  toString(token.getType()) << "[" << (token.getContents()).size() << "]";
+					return os <<  toString(token.getType()) << "[" << token.source->source.size() << "]";
 				default:
 					std::ostringstream oss;
 					string parsed;
@@ -79,15 +81,25 @@ namespace flock {
 					{
 						for (auto it = vec.begin(); it != vec.end(); ++it) {
 							/* std::cout << *it; ... */
-							oss << (**it).getContents()->source;
+							oss << (*it)->getContents()->source;
 						}
 					}
-					return os << toString(token.getType()) << ": '" << oss.str() << "'";
+					return os << toString(token.getType()) << ": '" << token.source->source << "'";
 				}
 
 			};
 
 		private:
+			static _sp<Range> joinRange(_sp_vec<RawToken> rawTokens) {
+				if (rawTokens.size() == 1) {
+					return rawTokens.at(0)->getContents();
+				}
+				Range * range = rawTokens.at(0)->getContents().get();
+				for (auto it = rawTokens.begin()+1; it != rawTokens.end(); ++it) {
+					range = new Range(*range, *(*it)->getContents().get());
+				}
+				return make_shared<Range>(*range);
+			}
 			static _sp_vec<RawToken> tokenAsVector(_sp<RawToken> rawToken) {
 				_sp_vec<RawToken> vec;
 				vec.push_back(rawToken);
@@ -110,8 +122,8 @@ namespace flock {
 					return LexToken(LexType::Eof, raw_pop());
 				case RawType::NewLine:
 					return LexToken(LexType::NewLine, raw_pop());
-				case RawType::Unknown:
-					return LexToken(LexType::Unknown, raw_pop());
+				case RawType::Whitespace:
+					return LexToken(LexType::Whitespace, raw_pop());
 				case RawType::Punctuation:
 					if (pollChar(0) == '/' && pollChar(1) == '/') {
 						int idx = 2;

@@ -35,6 +35,6 @@ namespace flock {
 	using _sp = shared_ptr<T>;
 
 	template <typename T>
-	using _sp_vec = vector<shared_ptr<T>>;
+	using _sp_vec = vector<_sp<T>>;
 }
 #endif
