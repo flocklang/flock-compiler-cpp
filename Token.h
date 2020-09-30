@@ -16,11 +16,11 @@
 #ifndef FLOCK_COMPILER_TOKEN_H
 #define FLOCK_COMPILER_TOKEN_H
 #include <memory>
+#include <vector>
 #include "Supplier.h"
 namespace flock {
     using namespace supplier;
     namespace token {
-       
 
         template<typename Type, typename Contents>
         class Token {
@@ -38,7 +38,6 @@ namespace flock {
             const Type type;
             const Contents contents;
         };
-
     }
 }
 #endif

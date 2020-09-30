@@ -21,7 +21,7 @@
 #include <iostream>
 #include <string>
 //#include "old_Tokenizer.h"
-#include "RawToken.h"
+#include "LexToken.h"
 #include "ConsoleCharSupplier.h"
 
 using namespace flock;
@@ -32,16 +32,18 @@ using namespace flock::token;
 static void MainLoop() {
 	//ConsoleSupplier consoleSupplier;
 	ConsoleCharSupplier consoleSupplier;
-	RawTokenizer tokenizer(&consoleSupplier);
+	RawTokenizer *rawTokenizer = new RawTokenizer(&consoleSupplier);
+
+	LexTokenizer lexTokenizer(rawTokenizer);
 	while (true) {
 		fprintf(stderr, "\nready> ");
 
 		//std::unique_ptr<TypedToken> token = tokenizer.supply();
-		std::shared_ptr<RawToken> token = tokenizer.supply();
+		std::shared_ptr<LexToken> token = lexTokenizer.supply();
 		std::cout << "\n" << *token;
 
 		switch (token->getType()) {
-		case RawType::Eof:
+		case LexType::Eof:
 		//case Token::Type::NewLine:
 			return;
 		default:

@@ -24,7 +24,7 @@
 namespace flock {
 	using namespace source;
 	namespace supplier {
-		class LocationSupplier : public CachedSupplier <Location, Range> {
+		class LocationSupplier : public CachedSupplier <Location, std::shared_ptr<Range>> {
 		public:
 			LocationSupplier(Supplier<int>* charSupplier) : charSupplier(charSupplier) {}
 			std::shared_ptr<Range> pollRange(const int amount = 1, const int startIdx = 0) override {

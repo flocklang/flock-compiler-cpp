@@ -17,6 +17,9 @@
 #define FLOCK_COMPILER_UTIL_H
 
 #include <string>
+#include <vector>
+
+using namespace std;
 namespace flock {
 
 	static bool isnewline(const int character)
@@ -24,8 +27,14 @@ namespace flock {
 		return character == '\n' || character == '\r';
 	}
 
-	static bool isequal(const std::string from, std::string to) {
+	static bool isequal(const string from, string to) {
 		return from.compare(to) == 0;
 	}
+
+	template <typename T>
+	using _sp = shared_ptr<T>;
+
+	template <typename T>
+	using _sp_vec = vector<shared_ptr<T>>;
 }
 #endif

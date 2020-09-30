@@ -19,6 +19,7 @@
 
 #include "Supplier.h"
 #include <deque>
+#include <vector>
 #include <memory>
 
 namespace flock {
@@ -28,7 +29,7 @@ namespace flock {
         class CachedSupplier : public  Supplier<std::shared_ptr<T>> {
         public:
 
-            virtual std::shared_ptr<R> pollRange(const int amount = 1, const int startIdx = 0) = 0;
+            virtual R pollRange(const int amount = 1, const int startIdx = 0) = 0;
 
             std::shared_ptr<T> poll(const int idx = 0) {
                 for (int i = store.size(); i <= idx; i++) {
@@ -62,7 +63,7 @@ namespace flock {
                 }
             };
 
-            std::shared_ptr<R> popRange(const int amount = 1) {
+            R popRange(const int amount = 1) {
                 auto range = pollRange(amount);
                 if (!store.empty()) {
                     store.erase(store.begin(), std::min(store.begin() + amount, store.end()));
@@ -71,6 +72,29 @@ namespace flock {
             };
         protected:
             std::deque<std::shared_ptr<T>> store;
+        };
+
+        template<typename T>
+        class CachedVectorSupplier : public CachedSupplier<T, std::vector<std::shared_ptr<T>>> {
+        public:
+            std::vector<std::shared_ptr<T>> pollRange(const int amount = 1, const int startIdx = 0) override {
+                std::vector<std::shared_ptr<T>> vecStore;
+                std::shared_ptr<T> option = poll(startIdx);
+                if (!option) {
+                    return vecStore;
+                }
+                vecStore.push_back(option);
+                int nextId = startIdx + 1;
+                int count = amount - 1;
+                while (count-- > 0) {
+                    std::shared_ptr<T> option = poll(nextId++);
+                    if (!option) {
+                        return vecStore;
+                    }
+                    vecStore.push_back(option);
+                }
+                return vecStore;
+            };
         };
     }
 }

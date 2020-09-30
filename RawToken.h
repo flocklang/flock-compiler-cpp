@@ -17,11 +17,13 @@
 #define FLOCK_COMPILER_RAW_TOKEN_H
 #include "Token.h"
 #include "LocationSupplier.h"
+#include <vector>
 
 /* Raw Token has one main job
  * To decipher whether we are looking at whitepace, alphabatical, numerics, or symbols. This is meant to be very simple. 
  * From raw tokens we can get symbolic tokens.
  */
+using namespace std;
 namespace flock {
     using namespace supplier;
     using namespace source;
@@ -37,7 +39,7 @@ namespace flock {
             Punctuation
 
         };
-        static std::string toString(const RawType type) {
+        static string toString(const RawType type) {
             switch (type) {
             case RawType::Eof:
                 return "Eof";
@@ -59,20 +61,20 @@ namespace flock {
             }
         }
 
-        class RawToken : public Token<RawType, std::shared_ptr <Range>>{
+        class RawToken : public Token<RawType, _sp<Range>>{
         public:
             RawToken(RawType type, const Range range) : Token(type, toRange(range)) {}
-            RawToken(RawType type, const Location location) : Token(type, toRange(std::make_shared<Location>(location))) {}
-            RawToken(RawType type, const std::shared_ptr<Range> range) : Token(type, range) {}
-            RawToken(RawType type, const std::shared_ptr<Location> location) : Token(type, toRange(location)) {}
-            static std::shared_ptr <Range> toRange(Range range) {
-                return std::make_shared<Range>(range);
+            RawToken(RawType type, const Location location) : Token(type, toRange(make_shared<Location>(location))) {}
+            RawToken(RawType type, const _sp<Range>range) : Token(type, range) {}
+            RawToken(RawType type, const _sp<Location> location) : Token(type, toRange(location)) {}
+            static _sp<Range>toRange(Range range) {
+                return make_shared<Range>(range);
             }
-            static std::shared_ptr <Range> toRange(std::shared_ptr<Location> location) {
-               return std::make_shared<Range>(Range(location));
+            static _sp<Range>toRange(_sp<Location> location) {
+               return make_shared<Range>(Range(location));
             }
 
-            friend std::ostream& operator<<(std::ostream& os, RawToken& token) {
+            friend ostream& operator<<(ostream& os, RawToken& token) {
                 switch (token.getType()) {
                 case RawType::Unknown:
                 case RawType::Eof:
@@ -85,12 +87,13 @@ namespace flock {
             };
         };
 
-        class RawTokenizer : public Supplier<std::shared_ptr<RawToken>> {
-        public:
-            RawTokenizer(Supplier<int>* charSupplier) : locationSupplier(LocationSupplier(charSupplier)) {}
 
-            std::shared_ptr<RawToken> supply() override {
-                return std::make_shared<RawToken>(decipherToken());
+        class RawTokenizer : public CachedVectorSupplier<RawToken> {
+        public:
+            RawTokenizer(Supplier<int>* charSupplier) : CachedVectorSupplier(),  locationSupplier(LocationSupplier(charSupplier)) {}
+
+            _sp<RawToken> supply() override {
+                return make_shared<RawToken>(decipherToken());
             };
 
         private:
@@ -137,18 +140,20 @@ namespace flock {
             int pollChar(const int idx = 0) {
                 return locationSupplier.poll(idx)->character;
             };
-            std::shared_ptr<Location> loc_poll(const int idx = 0) {
+            _sp<Location> loc_poll(const int idx = 0) {
                 return locationSupplier.poll(idx);
             }
-            std::shared_ptr<Location> loc_pop() {
+            _sp<Location> loc_pop() {
                 return locationSupplier.pop();
             }
-            std::shared_ptr<Range> range_pop(const int amount = 1) {
+            _sp<Range>range_pop(const int amount = 1) {
                 return locationSupplier.popRange(amount);
             }
 
             LocationSupplier locationSupplier;
         };
+
+
     }
 }
 #endif
