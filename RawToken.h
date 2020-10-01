@@ -138,7 +138,11 @@ namespace flock {
             };
 
             int pollChar(const int idx = 0) {
-                return locationSupplier.poll(idx)->character;
+                auto value = locationSupplier.poll(idx);
+                if (value == nullptr) {
+                    return -1;
+                }
+                return value->character;
             };
             _sp<Location> loc_poll(const int idx = 0) {
                 return locationSupplier.poll(idx);

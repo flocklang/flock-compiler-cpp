@@ -37,7 +37,11 @@ namespace flock {
 			Eof,
 			Whitespace,
 			NewLine,
-			Comment
+			Comment,
+			Integer,
+			Decimal,
+			String,
+			Identifier
 
 		};
 
@@ -51,6 +55,14 @@ namespace flock {
 				return "NewLine";
 			case LexType::Comment:
 				return "Comment";
+			case LexType::Integer:
+				return "Integer";
+			case LexType::Decimal:
+				return "Decimal";
+			case LexType::String:
+				return "String";
+			case LexType::Identifier:
+				return "Identifier";
 			case LexType::Unknown:
 			default:
 				return "Unknown";
@@ -59,7 +71,7 @@ namespace flock {
 
 		class LexToken : public Token<LexType, _sp_vec<RawToken>> {
 		public:
-			LexToken(LexType type, _sp_vec<RawToken> rawtokens) : Token(type, rawtokens) , source(joinRange(rawtokens)){}
+			LexToken(LexType type, _sp_vec<RawToken> rawtokens) : Token(type, rawtokens), source(joinRange(rawtokens)) {}
 			LexToken(LexType type, _sp<RawToken> rawToken) : LexToken(type, tokenAsVector(rawToken)) {}
 			LexToken(LexType type) : LexToken(type, _sp_vec<RawToken>()) {}
 
@@ -72,7 +84,7 @@ namespace flock {
 				case LexType::Eof:
 				case LexType::Whitespace:
 				case LexType::NewLine:
-					return os <<  toString(token.getType()) << "[" << token.source->source.size() << "]";
+					return os << toString(token.getType()) << "[" << token.source->source.size() << "]";
 				default:
 					std::ostringstream oss;
 					string parsed;
@@ -89,13 +101,13 @@ namespace flock {
 
 			};
 
-		private:
+		protected:
 			static _sp<Range> joinRange(_sp_vec<RawToken> rawTokens) {
 				if (rawTokens.size() == 1) {
 					return rawTokens.at(0)->getContents();
 				}
-				Range * range = rawTokens.at(0)->getContents().get();
-				for (auto it = rawTokens.begin()+1; it != rawTokens.end(); ++it) {
+				Range* range = rawTokens.at(0)->getContents().get();
+				for (auto it = rawTokens.begin() + 1; it != rawTokens.end(); ++it) {
 					range = new Range(*range, *(*it)->getContents().get());
 				}
 				return make_shared<Range>(*range);
@@ -124,40 +136,96 @@ namespace flock {
 					return LexToken(LexType::NewLine, raw_pop());
 				case RawType::Whitespace:
 					return LexToken(LexType::Whitespace, raw_pop());
-				case RawType::Punctuation:
-					if (pollChar(0) == '/' && pollChar(1) == '/') {
+				case RawType::Punctuation: {
+					const int nextChar = pollChar();
+					if (nextChar == '"' || nextChar == '\'') {
+						int idx = 1;
+						while (pollType(idx) != RawType::Eof && (nextChar != pollChar(idx) || pollChar(idx-1) == '\\') ) {
+							idx++;
+						}
+						return LexToken(LexType::String, vec_pop(idx + 1));
+					}
+					const string nextChars = pollString(2);
+					if (nextChars == "//") {
 						int idx = 2;
 						while (pollType(idx) != RawType::NewLine && pollType(idx) != RawType::Eof) {
 							idx++;
 						}
 						return LexToken(LexType::Comment, vec_pop(idx));
 					}
-					if (pollChar(0) == '/' && pollChar(1) == '*') {
+					else if (nextChars == "/*") {
 						int idx = 2;
-						while (pollType(idx) != RawType::Eof && !(pollChar(idx) == '*' && pollChar(idx + 1) == '/')) {
+						while (pollType(idx) != RawType::Eof && pollString(2, idx) != "*/") {
 							idx++;
 						}
 						return LexToken(LexType::Comment, vec_pop(idx + 2));
 					}
+				}
+				case RawType::Integer: {
+					const RawType nextType = pollType(1);
+					if (nextType == RawType::Punctuation || nextType == RawType::Whitespace || nextType == RawType::NewLine || nextType == RawType::Eof) {
+						if (pollChar(1) != '.' || pollType(2) != RawType::Integer) {
+							return LexToken(LexType::Integer, raw_pop());
+						}
+						else if (pollChar(3) != '.' || pollType(4) != RawType::Integer) {
+							return LexToken(LexType::Decimal, vec_pop(3));
+						}
+					}
+				}
+				case RawType::Alpha: {
+					int idx = 1;
+					while (pollType(idx) == RawType::Alpha || pollType(idx) == RawType::Integer || (pollType(idx) == RawType::Punctuation && pollChar(idx) == '_')) {
+						idx++;
+					}
+					return LexToken(LexType::Identifier, vec_pop(idx));
+				}
 				default:
 					break;
 				}
 				return LexToken(LexType::Unknown, raw_pop());
 			};
 			int pollChar(const int idx = 0, const int pos = 0) {
-				return pollString(idx).at(pos);
+				const string value = pollTokenString(idx);
+				if (pos >= value.size()) {
+					return -1;
+				}
+				return value.at(pos);
 			};
-			string pollChars(const int count = -1, const int idx = 0, const int pos = 0) {
-				return pollRange(idx)->source.substr(pos, count);
+			string pollString(const int count = -1, const int idx = 0, const int pos = 0) {
+				string str;
+				int index = idx;
+				do {
+					if (pollType(index) == RawType::Eof) {
+						if (str.size() > pos) {
+							return str.substr(pos);
+						}
+						return string();
+					}
+					// won't ever be a null pointer because pollType does that check already.
+					str += pollRange(index++)->source;
+				} while (count == -1 || (str.size() < count + pos));
+				return str.substr(pos, count);
 			};
-			string pollString(const int idx = 0) {
-				return pollRange(idx)->source;
+			string pollTokenString(const int idx = 0) {
+				auto value = pollRange(idx);
+				if (value == nullptr) {
+					return string();
+				}
+				return value->source;
 			};
 			_sp<Range> pollRange(const int idx = 0) {
-				return rawTokenSupplier->poll(idx)->getContents();
+				auto value = rawTokenSupplier->poll(idx);
+				if (value == nullptr) {
+					return nullptr;
+				}
+				return value->getContents();
 			};
 			RawType pollType(const int idx = 0) {
-				return rawTokenSupplier->poll(idx)->getType();
+				auto value = rawTokenSupplier->poll(idx);
+				if (value == nullptr) {
+					return RawType::Eof;
+				}
+				return value->getType();
 			};
 			_sp<RawToken> raw_poll(const int idx = 0) {
 				return rawTokenSupplier->poll(idx);
