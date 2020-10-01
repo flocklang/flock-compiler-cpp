@@ -30,9 +30,6 @@
     <ClCompile Include="FlockCompilerCpp.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="old_Tokenizer.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
@@ -51,9 +48,6 @@
     <None Include="FlockCompilerCpp.licenseheader" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="old_Tokenizer.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="Supplier.h">
       <Filter>Header Files\Supplier</Filter>
     </ClInclude>

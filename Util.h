@@ -18,17 +18,48 @@
 
 #include <string>
 #include <vector>
+#include <initializer_list>
 
 using namespace std;
 namespace flock {
 
-	static bool isnewline(const int character)
+	static bool isNewLine(const int character)
 	{
 		return character == '\n' || character == '\r';
 	}
 
-	static bool isequal(const string from, string to) {
+	static bool isEqual(const string from, string to) {
 		return from.compare(to) == 0;
+	}
+	template<typename T>
+	static bool any_of(const T value, initializer_list<T> list) {
+		for (T elem : list)
+		{
+			if (value == elem) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	static bool any_of(const int value, string list) {
+		for (auto elem : list)
+		{
+			if (value == elem) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	template<typename T>
+	static bool none_of(const T value, initializer_list<T> list) {
+		return !any_of<T>(value, list);
+	}
+
+	template<typename T>
+	static bool none_of(const T value, string list) {
+		return !any_of<T>(value, list);
 	}
 
 	template <typename T>

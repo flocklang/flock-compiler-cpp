@@ -148,7 +148,6 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="FlockCompilerCpp.cpp" />
-    <ClCompile Include="old_Tokenizer.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include=".gitattributes" />
@@ -169,7 +168,6 @@
     <ClInclude Include="Source.h" />
     <ClInclude Include="Supplier.h" />
     <ClInclude Include="Token.h" />
-    <ClInclude Include="old_Tokenizer.h" />
     <ClInclude Include="Util.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

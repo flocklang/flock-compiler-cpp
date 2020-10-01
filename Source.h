@@ -43,7 +43,7 @@ namespace flock {
 * Helper for the providing the next location, based on the previous location.
 */
 			static const Location next(Location last, const int character) {
-				if (isnewline(last.character)) {
+				if (isNewLine(last.character)) {
 					return Location(last.line + 1, 1, last.position + 1, character);
 				}
 				else {

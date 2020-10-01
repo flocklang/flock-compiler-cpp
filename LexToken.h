@@ -36,12 +36,12 @@ namespace flock {
 			Unknown,
 			Eof,
 			Whitespace,
-			NewLine,
 			Comment,
 			Integer,
 			Decimal,
 			String,
-			Identifier
+			Identifier,
+			Symbol
 
 		};
 
@@ -51,8 +51,6 @@ namespace flock {
 				return "Eof";
 			case LexType::Whitespace:
 				return "Whitespace";
-			case LexType::NewLine:
-				return "NewLine";
 			case LexType::Comment:
 				return "Comment";
 			case LexType::Integer:
@@ -63,6 +61,8 @@ namespace flock {
 				return "String";
 			case LexType::Identifier:
 				return "Identifier";
+			case LexType::Symbol:
+				return "Symbol";
 			case LexType::Unknown:
 			default:
 				return "Unknown";
@@ -71,11 +71,25 @@ namespace flock {
 
 		class LexToken : public Token<LexType, _sp_vec<RawToken>> {
 		public:
-			LexToken(LexType type, _sp_vec<RawToken> rawtokens) : Token(type, rawtokens), source(joinRange(rawtokens)) {}
+			LexToken(LexType type, _sp_vec<RawToken> rawtokens) : Token(type, rawtokens), joinedRange(joinRange(rawtokens)) {}
 			LexToken(LexType type, _sp<RawToken> rawToken) : LexToken(type, tokenAsVector(rawToken)) {}
 			LexToken(LexType type) : LexToken(type, _sp_vec<RawToken>()) {}
 
-			_sp<Range> source;
+			_sp<Range> joinedRange;
+
+			int getChar() {
+				if (joinedRange) {
+					return joinedRange->source.at(0);
+				}
+				return EOF;
+			}
+
+			string getString() {
+				if (joinedRange) {
+					return joinedRange->source;
+				}
+				return string();
+			}
 
 			friend ostream& operator<<(ostream& os, LexToken& token) {
 
@@ -83,20 +97,9 @@ namespace flock {
 				case LexType::Unknown:
 				case LexType::Eof:
 				case LexType::Whitespace:
-				case LexType::NewLine:
-					return os << toString(token.getType()) << "[" << token.source->source.size() << "]";
+					return os << toString(token.getType()) << "[" << token.getString().size() << "]";
 				default:
-					std::ostringstream oss;
-					string parsed;
-					auto vec = token.getContents();
-					if (!vec.empty())
-					{
-						for (auto it = vec.begin(); it != vec.end(); ++it) {
-							/* std::cout << *it; ... */
-							oss << (*it)->getContents()->source;
-						}
-					}
-					return os << toString(token.getType()) << ": '" << token.source->source << "'";
+					return os << toString(token.getType()) << ": '" << token.getString() << "'";
 				}
 
 			};
@@ -133,56 +136,73 @@ namespace flock {
 				case RawType::Eof:
 					return LexToken(LexType::Eof, raw_pop());
 				case RawType::NewLine:
-					return LexToken(LexType::NewLine, raw_pop());
-				case RawType::Whitespace:
-					return LexToken(LexType::Whitespace, raw_pop());
+				case RawType::Whitespace: {
+					int idx = 1;
+					while (any_of<RawType>(pollType(idx++), {RawType::Whitespace, RawType::NewLine})) {}
+					return LexToken(LexType::Whitespace, vec_pop(idx-1));
+				}
 				case RawType::Punctuation: {
 					const int nextChar = pollChar();
-					if (nextChar == '"' || nextChar == '\'') {
+					if (any_of(nextChar, "\"'")) {
 						int idx = 1;
-						while (pollType(idx) != RawType::Eof && (nextChar != pollChar(idx) || pollChar(idx-1) == '\\') ) {
+						while (pollType(idx) != RawType::Eof && (nextChar != pollChar(idx) || pollChar(idx - 1) == '\\')) {
 							idx++;
 						}
 						return LexToken(LexType::String, vec_pop(idx + 1));
 					}
+					
 					const string nextChars = pollString(2);
 					if (nextChars == "//") {
 						int idx = 2;
-						while (pollType(idx) != RawType::NewLine && pollType(idx) != RawType::Eof) {
-							idx++;
-						}
-						return LexToken(LexType::Comment, vec_pop(idx));
+						while (none_of<RawType>(pollType(idx++), { RawType::NewLine, RawType::Eof })) {}
+						return LexToken(LexType::Comment, vec_pop(idx-1));
 					}
-					else if (nextChars == "/*") {
+					if (nextChars == "/*") {
 						int idx = 2;
 						while (pollType(idx) != RawType::Eof && pollString(2, idx) != "*/") {
 							idx++;
 						}
 						return LexToken(LexType::Comment, vec_pop(idx + 2));
+					} 
+					if (any_of(nextChar, "_$")) {
+						int idx = endIndexOfIdentifier(1);
+						if (idx > 1) {
+							return LexToken(LexType::Identifier, vec_pop(idx + 1));
+						}
+						return LexToken(LexType::Symbol, raw_pop());
+					}
+					if (any_of(nextChar, "[](){}<>.,;:/\\#-+*%|&~@?!^=_$")) { //_$ already captured, but if I change my mind at least they are there
+						return LexToken(LexType::Symbol, raw_pop());
 					}
 				}
 				case RawType::Integer: {
 					const RawType nextType = pollType(1);
-					if (nextType == RawType::Punctuation || nextType == RawType::Whitespace || nextType == RawType::NewLine || nextType == RawType::Eof) {
+					if (any_of<RawType>(nextType, { RawType::Punctuation, RawType::Whitespace, RawType::NewLine, RawType::Eof })) {
 						if (pollChar(1) != '.' || pollType(2) != RawType::Integer) {
 							return LexToken(LexType::Integer, raw_pop());
 						}
-						else if (pollChar(3) != '.' || pollType(4) != RawType::Integer) {
+						if (pollChar(3) != '.' || pollType(4) != RawType::Integer) {
 							return LexToken(LexType::Decimal, vec_pop(3));
 						}
 					}
 				}
 				case RawType::Alpha: {
-					int idx = 1;
-					while (pollType(idx) == RawType::Alpha || pollType(idx) == RawType::Integer || (pollType(idx) == RawType::Punctuation && pollChar(idx) == '_')) {
-						idx++;
-					}
+					int idx = endIndexOfIdentifier(1);
 					return LexToken(LexType::Identifier, vec_pop(idx));
 				}
 				default:
 					break;
 				}
 				return LexToken(LexType::Unknown, raw_pop());
+			};
+			int endIndexOfIdentifier(const int index)
+			{
+				int idx = index;
+				RawType type = pollType(idx);
+				while (any_of<RawType>(type, { RawType::Alpha, RawType::Integer }) || (type == RawType::Punctuation && any_of(pollChar(idx), "_$"))) {
+					type = pollType(++idx);
+				}
+				return idx;
 			};
 			int pollChar(const int idx = 0, const int pos = 0) {
 				const string value = pollTokenString(idx);

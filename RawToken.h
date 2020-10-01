@@ -101,9 +101,9 @@ namespace flock {
                 if (pollChar() == EOF) {
                     return RawToken(RawType::Eof, loc_pop());
                 }
-                if (isnewline(pollChar())) {
+                if (isNewLine(pollChar())) {
                     int idx = 1;
-                    while (isnewline(pollChar(idx))) {
+                    while (isNewLine(pollChar(idx))) {
                         idx++;
                     }
                     return RawToken(RawType::NewLine, range_pop(idx));
