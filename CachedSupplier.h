@@ -18,6 +18,7 @@
 #define FLOCK_COMPILER_CACHED_SUPPLIER_H
 
 #include "Supplier.h"
+#include "Util.h"
 #include <deque>
 #include <vector>
 #include <memory>
@@ -26,12 +27,12 @@ namespace flock {
     namespace supplier {
 
         template<typename T, typename R>
-        class CachedSupplier : public  Supplier<std::shared_ptr<T>> {
+        class CachedSupplier : public  Supplier<_sp<T>> {
         public:
 
             virtual R pollRange(const int amount = 1, const int startIdx = 0) = 0;
 
-            std::shared_ptr<T> poll(const int idx = 0) {
+            _sp<T> poll(const int idx = 0) {
                 for (int i = store.size(); i <= idx; i++) {
                     auto value = this->supply();
                     if (!value) {
@@ -47,7 +48,7 @@ namespace flock {
                 return store.at(idx);
             };
 
-            std::shared_ptr<T> pop() {
+            _sp<T> pop() {
                 if (store.empty()) {
                     auto value = this->supply();
                     if (!value) {
@@ -71,15 +72,15 @@ namespace flock {
                 return range;
             };
         protected:
-            std::deque<std::shared_ptr<T>> store;
+            std::deque<_sp<T>> store;
         };
 
-        template<typename T>
-        class CachedVectorSupplier : public CachedSupplier<T, std::vector<std::shared_ptr<T>>> {
+        template<typename T, typename R = _sp_vec<T>>
+        class CachedVectorSupplier : public CachedSupplier<T, R> {
         public:
-            std::vector<std::shared_ptr<T>> pollRange(const int amount = 1, const int startIdx = 0) override {
-                std::vector<std::shared_ptr<T>> vecStore;
-                std::shared_ptr<T> option = poll(startIdx);
+            R pollRange(const int amount = 1, const int startIdx = 0) override {
+                R vecStore;
+                _sp<T> option = this->poll(startIdx);
                 if (!option) {
                     return vecStore;
                 }
@@ -87,7 +88,7 @@ namespace flock {
                 int nextId = startIdx + 1;
                 int count = amount - 1;
                 while (count-- > 0) {
-                    std::shared_ptr<T> option = poll(nextId++);
+                    _sp<T> option = this->poll(nextId++);
                     if (!option) {
                         return vecStore;
                     }

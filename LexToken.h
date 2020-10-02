@@ -222,18 +222,18 @@ namespace flock {
 						return string();
 					}
 					// won't ever be a null pointer because pollType does that check already.
-					str += pollRange(index++)->source;
+					str += pollTokenRange(index++)->source;
 				} while (count == -1 || (str.size() < count + pos));
 				return str.substr(pos, count);
 			};
 			string pollTokenString(const int idx = 0) {
-				auto value = pollRange(idx);
+				auto value = pollTokenRange(idx);
 				if (value == nullptr) {
 					return string();
 				}
 				return value->source;
 			};
-			_sp<Range> pollRange(const int idx = 0) {
+			_sp<Range> pollTokenRange(const int idx = 0) {
 				auto value = rawTokenSupplier->poll(idx);
 				if (value == nullptr) {
 					return nullptr;

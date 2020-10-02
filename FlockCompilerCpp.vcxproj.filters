@@ -25,6 +25,9 @@
     <Filter Include="Header Files\Token">
       <UniqueIdentifier>{6fc1c8c6-fded-45fc-8f33-5c081bbf4b8e}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Header Files\AST">
+      <UniqueIdentifier>{b1b781ea-ce82-439f-833c-4cf550a88706}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="FlockCompilerCpp.cpp">
@@ -80,6 +83,12 @@
     </ClInclude>
     <ClInclude Include="LexToken.h">
       <Filter>Header Files\Token</Filter>
+    </ClInclude>
+    <ClInclude Include="AST.h">
+      <Filter>Header Files\AST</Filter>
+    </ClInclude>
+    <ClInclude Include="Parser.h">
+      <Filter>Header Files\AST</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
