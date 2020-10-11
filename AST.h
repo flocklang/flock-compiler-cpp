@@ -31,13 +31,44 @@ namespace flock {
             virtual ~ExprAST() = default;
         };
 
-        /// NumberExprAST - Expression class for numeric literals like "1.0".
-        class NumberExprAST : public ExprAST {
-            double Val;
+        /// BlockExprAST - Expression class for a group of expressions.
+        class BlockExprAST : public ExprAST {
+            _up_vec<ExprAST> expressions;
 
         public:
-            NumberExprAST(double Val) : Val(Val) {}
+            BlockExprAST(_up_vec<ExprAST> expressions) : expressions(expressions){}
         };
+        /// ImportExprAST - Expression class for numeric literals like "1".
+        class ImportExprAST : public ExprAST {
+            std::string source;
+            std::vector<std::string> args;
+
+        public:
+            ImportExprAST(const std::string& source, std::vector<std::string> args)
+                : source(source), args(std::move(args)) {}
+        };
+        /// IntegerExprAST - Expression class for numeric literals like "1".
+        class IntegerExprAST : public ExprAST {
+            long value;
+
+        public:
+            IntegerExprAST(long value) : value(value) {}
+        };
+        /// DecimalExprAST - Expression class for numeric literals like "1.0".
+        class DecimalExprAST : public ExprAST {
+            double value;
+
+        public:
+            DecimalExprAST(double Val) : value(value) {}
+        };
+        /// StringExprAST - Expression class for string literals like "abc".
+        class StringExprAST : public ExprAST {
+            std::string value;
+
+        public:
+            StringExprAST(const std::string& value) : value(value) {}
+        };
+
 
         /// VariableExprAST - Expression class for referencing a variable, like "a".
         class VariableExprAST : public ExprAST {

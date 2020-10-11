@@ -69,6 +69,10 @@ namespace flock {
 				source.append(start.source);
 				source.append(end.source);
 			};
+			Range(const std::shared_ptr < Range> start, const std::shared_ptr < Range> end) : start{ start->start }, end{ end->end } {
+				source.append(start->source);
+				source.append(end->source);
+			};
 
 			Range(const Range& other) : start(other.start), end(other.end) {
 				source.append(other.source);

@@ -26,7 +26,7 @@
 namespace flock {
     namespace supplier {
 
-        template<typename T, typename R>
+        template<typename T, typename R = _sp_vec<T>>
         class CachedSupplier : public  Supplier<_sp<T>> {
         public:
 
@@ -75,11 +75,11 @@ namespace flock {
             std::deque<_sp<T>> store;
         };
 
-        template<typename T, typename R = _sp_vec<T>>
-        class CachedVectorSupplier : public CachedSupplier<T, R> {
+        template<typename T>
+        class CachedVectorSupplier : public CachedSupplier<T> {
         public:
-            R pollRange(const int amount = 1, const int startIdx = 0) override {
-                R vecStore;
+            _sp_vec<T> pollRange(const int amount = 1, const int startIdx = 0) override {
+                _sp_vec<T> vecStore;
                 _sp<T> option = this->poll(startIdx);
                 if (!option) {
                     return vecStore;

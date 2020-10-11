@@ -90,5 +90,11 @@
     <ClInclude Include="Parser.h">
       <Filter>Header Files\AST</Filter>
     </ClInclude>
+    <ClInclude Include="Grammar.h">
+      <Filter>Header Files\AST</Filter>
+    </ClInclude>
+    <ClInclude Include="FlockGrammar.h">
+      <Filter>Header Files\AST</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

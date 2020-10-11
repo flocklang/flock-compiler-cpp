@@ -62,10 +62,18 @@ namespace flock {
 		return !any_of<T>(value, list);
 	}
 
+	// Short hand to help readability, (yes really, and on typing)
 	template <typename T>
 	using _sp = shared_ptr<T>;
 
 	template <typename T>
 	using _sp_vec = vector<_sp<T>>;
+
+	template <typename T>
+	using _up = unique_ptr<T>;
+
+	template <typename T>
+	using _up_vec = vector<_up<T>>;
+
 }
 #endif

@@ -22,6 +22,7 @@
 #include <string>
 #include "LexToken.h"
 #include "ConsoleCharSupplier.h"
+#include "FlockGrammar.h"
 
 using namespace flock;
 using namespace flock::token;
@@ -49,7 +50,8 @@ static void MainLoop() {
 
 int main()
 {
-	std::cout << "Hello Flock!\n";
+	const grammar::Library library = grammar::createFlockLibrary();
+	std::cout << "Hello Flock!\n" << library;;
 	MainLoop();
 }
 

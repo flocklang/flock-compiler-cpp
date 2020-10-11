@@ -47,8 +47,6 @@ namespace flock {
                 return "Whitespace";
             case RawType::NewLine:
                 return "NewLine";
-  /*          case RawType::Comment:
-                return "Comment";*/
             case RawType::Alpha:
                 return "Alpha";
             case RawType::Integer:
