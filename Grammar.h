@@ -16,10 +16,11 @@
 #ifndef FLOCK_COMPILER_GRAMMAR_H
 #define FLOCK_COMPILER_GRAMMAR_H
 #include "Util.h"
-#include "RawToken.h"
+#include "LocationSupplier.h"
 #include <vector>
 #include <map>
 #include <string>
+#include <numeric>
 
  ///
  /// Basic Grammar, that allows to employ basic BNF style grammars in language detection.
@@ -33,26 +34,45 @@ namespace flock {
 		class SyntaxNode;
 		class RuleVisitor;
 		class Library;
+		enum class Bracket {
+			NONE, SEQ, OR, AND, XOR
+		};
 
 		const static string COLOR_END = "\033[0m";
-		const static string COLOR_RED = "\x1B[31m";
+		const static string COLOR_DARK_RED = "\x1B[31m";
+		const static string COLOR_DARK_GREEN = "\x1B[32m";
+		const static string COLOR_DARK_YELLOW = "\x1B[33m";
+		const static string COLOR_DARK_BLUE = "\x1B[34m";
+		const static string COLOR_DARK_MAGENTA = "\x1B[35m";
+		const static string COLOR_DARK_CYAN = "\x1B[36m";
+		const static string COLOR_RED = "\x1B[91m";
 		const static string COLOR_GREEN = "\x1B[92m";
 		const static string COLOR_YELLOW = "\x1B[93m";
-		const static string COLOR_DARK_YELLOW = "\x1B[93m";
-		const static string COLOR_DARK_COLOR_MAGENTA = "\x1B[95m";
-		const static string COLOR_MAGENTA = "\x1B[95m";
-		const static string COLOR_DARK_CYAN = "\x1B[36m";
-		const static string COLOR_CYAN = "\x1B[96m";
 		const static string COLOR_BLUE = "\x1B[94m";
+		const static string COLOR_MAGENTA = "\x1B[95m";
+		const static string COLOR_CYAN = "\x1B[96m";
 		// blue is just too dark
-		const static string COLORS[] = { COLOR_RED , COLOR_GREEN, COLOR_YELLOW,COLOR_DARK_YELLOW, COLOR_MAGENTA, COLOR_DARK_COLOR_MAGENTA, COLOR_CYAN,COLOR_DARK_CYAN };
+		const static string COLORS[] = {
+			COLOR_DARK_RED,
+			COLOR_DARK_GREEN,
+			COLOR_DARK_YELLOW,
+			COLOR_DARK_BLUE,
+			COLOR_DARK_MAGENTA,
+			COLOR_DARK_CYAN,
+			COLOR_RED,
+			COLOR_GREEN,
+			COLOR_YELLOW,
+			COLOR_BLUE,
+			COLOR_MAGENTA,
+			COLOR_CYAN
+		};
 		const static int NUM_OF_COLORS = sizeof(COLORS) / sizeof(COLORS[0]);
 
 		static string RANDOM_COLOR() {
 			return COLORS[rand() % NUM_OF_COLORS];
 		}
 
-		using Tokens = supplier::CachedSupplier<token::RawToken>*;
+		using Tokens = supplier::CachedSupplier <Location, _sp<Range>>*;
 		static const int FAILURE = -1;
 
 
@@ -69,18 +89,20 @@ namespace flock {
 			/// Returns the next index to check. Only token rules explicitly increment the index</returns>
 			virtual int evaluate(Tokens tokens, const int idx, _sp<RuleVisitor> visitor) = 0;
 
-			virtual std::ostream& textstream(std::ostream& os, const bool bracketed = false) = 0;
+			virtual std::ostream& textstream(std::ostream& os, const bool bracketed = false, const Bracket bracket = Bracket::NONE) = 0;
 		};
 		/// <summary>
 		/// <symbol> : <expression>
 		/// </summary>
 		class Library : public  map<const string, _sp<Rule>> {
 		public:
+			_sp <Rule> rules(const string symbol, _sp <Rule> expression);
 			_sp <Rule> rule(const string symbol, _sp <Rule> expression) {
 				emplace(symbol, expression);
 				return expression;
 			}
 			_sp <Rule> rule(const string symbol, initializer_list<_sp<Rule>> expressions);
+			_sp <Rule> rules(const string symbol, initializer_list<_sp<Rule>> expressions);
 
 			_sp<Rule> rule(const string symbol) {
 				return at(symbol);
@@ -89,7 +111,7 @@ namespace flock {
 			friend std::ostream& operator<<(std::ostream& os, const Library& library) {
 				for (const auto& p : library)
 				{
-					os << p.first << " = ";
+					os << COLOR_DARK_GREEN << p.first << COLOR_END << " = ";
 					p.second->textstream(os, true) << " ;\n";
 				}
 				return os;
@@ -103,19 +125,11 @@ namespace flock {
 			void append(_sp<SyntaxNode> syntaxNode) {
 				children.push_back(syntaxNode);
 			}
-			void fill(_sp_vec<token::RawToken> tokensToSet) {
-				tokens = tokensToSet;
-				if (tokens.size() > 0) {
-					_sp<Range> newRange = tokens.at(0)->getContents();
-					for (int i = 1; i < tokens.size(); i++) {
-						newRange = make_shared<Range>(Range(newRange, tokens.at(i)->getContents()));
-					}
-					range = newRange;
-				}
+			void fill(_sp<Range> rangeToSet) {
+				this->range = rangeToSet;
 			}
 		protected:
 			_sp_vec<SyntaxNode> children;
-			_sp_vec<token::RawToken> tokens;
 			_sp<Range> range = nullptr;
 			string type;
 		};
@@ -133,8 +147,8 @@ namespace flock {
 			void accept(_sp<RuleVisitor> visitor) {
 				syntaxNode->append(visitor->syntaxNode);
 			}
-			void accept(_sp_vec<token::RawToken> tokensToSet) {
-				syntaxNode->fill(tokensToSet);
+			void accept(_sp <Range> range) {
+				syntaxNode->fill(range);
 			}
 			_sp<Rule> rule(string ruleName) {
 				library->rule(ruleName);
@@ -164,14 +178,41 @@ namespace flock {
 		/// and(rule1, rule2, rule3) will only evaluate as true if they all evaluate as true.
 		/// or(rule1, rule2, rule3) will only evaluate to false if they all evaluate as false.
 		/// xor(rule1, rule2, rule3) will only evaluate to true if only one of them evaluates to true.
-		/// seq(rule1, rule2, rule3) will execute all 3 in order left to right.
+		/// NONE(rule1, rule2, rule3) will execute all 3 in order left to right.
 		/// </summary>
 		class BinaryRule : public Rule {
 		public:
-			BinaryRule(initializer_list<_sp<Rule>> children) : children(_sp_vec<Rule>(children)) {}
+			BinaryRule(_sp_vec<Rule> children) : children(children) {}
+			BinaryRule(initializer_list<_sp<Rule>> children) : BinaryRule(_sp_vec<Rule>(children)) {}
 			BinaryRule(_sp<Rule> left, _sp<Rule> right) : BinaryRule({ left, right }) {}
 		protected:
 			_sp_vec<Rule> children;
+			std::ostream& textstream(std::ostream& os, const bool bracketed = false, const Bracket bracketType = Bracket::NONE) override {
+				if (children.size() == 1) {
+					// pass through
+					return children.back()->textstream(os, bracketed, bracket());
+				}
+				else {
+					if (!(bracketed || bracket() == bracketType)) {
+						os << "(";
+					}
+					for (auto it = children.cbegin(); it != children.cend(); ++it) {
+
+						(*it)->textstream(os, false, bracket());
+						if (it < children.cend() - 1) {
+							textstream_seperator(os);
+						}
+					}
+					if (bracketed || bracket() == bracketType) {
+						return os;
+					}
+					return os << ")";
+				}
+			}
+			virtual std::ostream& textstream_seperator(std::ostream& os) = 0;
+
+			virtual Bracket bracket() = 0;
+
 		};
 
 		// Collecting Rules
@@ -188,15 +229,15 @@ namespace flock {
 				}
 				const int amount = newIdx - idx;
 				if (amount > 0) {
-					_sp_vec<token::RawToken> range = tokens->pollRange(amount, idx);
+					_sp<Range> range = tokens->pollRange(amount, idx);
 					newVisitor->accept(range);
 					visitor->accept(newVisitor);
 					return newIdx;
 				}
 				return idx;
 			}
-			std::ostream& textstream(std::ostream& os, const bool bracketed = false) override {
-				return os << collectName;
+			std::ostream& textstream(std::ostream& os, const bool bracketed = false, const Bracket bracket = Bracket::NONE) override {
+				return os << COLOR_DARK_GREEN << collectName << COLOR_END;
 			}
 
 		protected:
@@ -216,8 +257,8 @@ namespace flock {
 				return CollectingRule(rule, collectName).evaluate(tokens, idx, visitor);
 			}
 
-			std::ostream& textstream(std::ostream& os, const bool bracketed = false) override {
-				return os << "<" << ruleName << ">";
+			std::ostream& textstream(std::ostream& os, const bool bracketed = false, const Bracket bracket = Bracket::NONE) override {
+				return os << COLOR_DARK_GREEN << ruleName << COLOR_END;
 			}
 
 		protected:
@@ -226,142 +267,104 @@ namespace flock {
 		};
 
 		// Token Rules
-		template<typename T, typename E = T>
+		template<typename T>
 		class EqualRule : public Rule {
 		public:
-			EqualRule(initializer_list<T> values) : values(vector<T>(values)) {}
+			EqualRule(vector<T> values) : values(values) {}
+			EqualRule(initializer_list<T> values) : EqualRule(vector<T>(values)) {}
 			EqualRule(T value) : EqualRule({ value }) {}
 
 			int evaluate(Tokens tokens, const int idx, _sp<RuleVisitor> visitor) override {
-				E toCompare = this->getFromRawToken(tokens->poll(idx));
 				for (T value : values) {
-					if (isEqual(value, toCompare)) {
-						return idx + 1;
+					int newIdx = contains(value, tokens, idx);
+					if (newIdx != FAILURE) {
+						return FAILURE;
 					}
 				}
 				return FAILURE;
 			}
-			std::ostream& textstream(std::ostream& os, const bool bracketed = false) override {
-				return os;
-			}
-		protected:
-			virtual bool isEqual(T provided, E evaluated) = 0;
-			virtual E getFromRawToken(_sp<token::RawToken> token) = 0;
-			vector<T> values;
-		};
-
-		class EqualTypeRule : public EqualRule<token::RawType> {
-		public:
-			EqualTypeRule(initializer_list<token::RawType> values) : EqualRule(values) {}
-			EqualTypeRule(token::RawType value) : EqualRule(value) {}
-
-
-			std::ostream& textstream(std::ostream& os, const bool bracketed = false) override {
+			std::ostream& textstream(std::ostream& os, const bool bracketed = false, const Bracket bracket = Bracket::NONE) override {
 				if (values.size() == 1) {
-					return os << toString(values.back());
+					return textstream_value(os, values.back());
 				}
 				else {
-					const string color = RANDOM_COLOR();
-					if (!bracketed) {
-						os << color << "(" << COLOR_END;
+					if (!(bracketed || bracket == Bracket::OR)) {
+						os <<  "(" ;
 					}
 					for (auto it = values.cbegin(); it != values.cend(); ++it) {
-
-						os << toString(*it);
+						textstream_value(os, *it);
 						if (it < values.cend() - 1) {
 							os << " | ";
 						}
 					}
-					if (bracketed) {
+					if (bracketed || bracket == Bracket::OR) {
 						return os;
 					}
-					return os << color << ")" << COLOR_END;
-				};
+					return os << ")" ;
+				}
 			}
 		protected:
-			token::RawType getFromRawToken(_sp<token::RawToken> token) override {
-				return token->getType();
-			}
-
-			bool isEqual(token::RawType provided, token::RawType evaluated) override {
-				return provided == evaluated;
-			}
+			virtual int contains(T provided, Tokens tokens, const int idx) = 0;
+			virtual std::ostream& textstream_value(std::ostream& os, T value) = 0;
+			vector<T> values;
 		};
 
 		class EqualStringRule : public EqualRule<string> {
 		public:
+			EqualStringRule(vector<string> values) : EqualRule(values) {}
 			EqualStringRule(initializer_list<string> values) : EqualRule(values) {}
 			EqualStringRule(string value) : EqualRule(value) {}
 
-			std::ostream& textstream(std::ostream& os, const bool bracketed = false) override {
-				if (values.size() == 1) {
-					return os << "\"" << values.back() << "\"";
-				}
-				else {
-					const string color = RANDOM_COLOR();
-					if (!bracketed) {
-						os << color << "(" << COLOR_END;
-					}
-					for (auto it = values.cbegin(); it != values.cend(); ++it) {
-
-						os << "\"" << *it << "\"";
-						if (it < values.cend() - 1) {
-							os << " | ";
-						}
-					}
-					if (!bracketed) {
-						return os;
-					}
-					return os << color << ")" << COLOR_END;
-				}
-			}
 		protected:
-			string getFromRawToken(_sp<token::RawToken> token) override {
-				return token->getContents()->source;
+			int contains(string provided, Tokens tokens, const int idx) override {
+				auto range = tokens->pollRange(provided.size(), idx);
+				if (range && provided == range->source) {
+					return idx + provided.size();
+				}
+				return FAILURE;
 			}
-
-			bool isEqual(string provided, string evaluated) override {
-				return provided == evaluated;
+			std::ostream& textstream_value(std::ostream& os, string value) override {
+				return os << COLOR_DARK_RED << "\"" << value << "\"" << COLOR_END;
 			}
 
 		};
 
-		class HasCharRule : public EqualRule<int, string> {
+		class EqualCharRule : public EqualRule<int> {
 		public:
-			HasCharRule(initializer_list<int> values, const int pos = 0) : EqualRule(values), pos(pos) {}
-			HasCharRule(int value, const int pos = 0) : HasCharRule({ value }, pos) {}
+			EqualCharRule(vector<int> values, const int pos = 0) : EqualRule(values), pos(pos) {}
+			EqualCharRule(initializer_list<int> values, const int pos = 0) : EqualRule(values), pos(pos) {}
+			EqualCharRule(int value, const int pos = 0) : EqualCharRule({ value }, pos) {}
 
-
-			std::ostream& textstream(std::ostream& os, const bool bracketed = false) override {
-				if (values.size() == 1) {
-					return os << "'" << (char)(values.back()) << "'";
-				}
-				else {
-					const string color = RANDOM_COLOR();
-					if (!bracketed) {
-						os << color << "(" << COLOR_END;
-					}
-					for (auto it = values.cbegin(); it != values.cend(); ++it) {
-
-						os << "'" << *it << "'";
-						if (it < values.cend() - 1) {
-							os << " | ";
-						}
-					}
-					if (bracketed) {
-						return os;
-					}
-					return os << color << ")" << COLOR_END;
-				}
-			}
 		protected:
-			string getFromRawToken(_sp<token::RawToken> token) override {
-				return token->getContents()->source;
-			}
-			bool isEqual(int provided, string evaluated) override {
-				return evaluated.length() > pos && provided == evaluated.at(pos);
-			}
+			// get rid of the pos rule
 			const int pos;
+
+			int contains(int provided, Tokens tokens, const int idx) override {
+				auto location = tokens->poll(idx + pos);
+				if (location && provided == location->character) {
+					return idx + 1;
+				}
+				return FAILURE;
+			}
+
+			std::ostream& textstream_value(std::ostream& os, int value) override {
+				switch (value) {
+				case -1:
+					return os << COLOR_DARK_RED << "EOF" << COLOR_END;
+				case '\n':
+					return os << COLOR_DARK_RED << "'" << "\\n" << "'" << COLOR_END;
+				case '\r':
+					return os << COLOR_DARK_RED << "'" << "\\r" << "'" << COLOR_END;
+				case '\t':
+					return os << COLOR_DARK_RED << "'" << "\\t" << "'" << COLOR_END;
+				case '\v':
+					return os << COLOR_DARK_RED << "'" << "\\v" << "'" << COLOR_END;
+				case '\f':
+					return os << COLOR_DARK_RED << "'" << "\\f" << "'" << COLOR_END;
+				default:
+					return os << COLOR_DARK_RED << "'" << (char)value << "'" << COLOR_END;
+				}
+			}
 		};
 
 		// Logic Rules
@@ -370,10 +373,10 @@ namespace flock {
 		public:
 			OptionalRule(_sp<Rule> child) : UnnaryRule(child) {}
 
-			std::ostream& textstream(std::ostream& os, const bool bracketed = false) override {
-				const string color = RANDOM_COLOR();
-				os << color << "[" << COLOR_END;
-				return child->textstream(os, true) << color << "]" << COLOR_END;;
+			std::ostream& textstream(std::ostream& os, const bool bracketed = false, const Bracket bracket = Bracket::NONE) override {
+				;
+				os << "[";
+				return child->textstream(os, true) <<  "]" ;
 			}
 		protected:
 			int evaluate(Tokens tokens, const int idx, _sp<RuleVisitor> visitor) override {
@@ -389,7 +392,7 @@ namespace flock {
 		public:
 			NotRule(_sp<Rule> child) : UnnaryRule(child) {}
 
-			std::ostream& textstream(std::ostream& os, const bool bracketed = false) override {
+			std::ostream& textstream(std::ostream& os, const bool bracketed = false, const Bracket bracket = Bracket::NONE) override {
 				os << "!";
 				return child->textstream(os);
 			}
@@ -407,17 +410,16 @@ namespace flock {
 		public:
 			RepeatRule(_sp<Rule> child, const int min = 0, const int max = 0) : UnnaryRule(child), min(min), max(max) {}
 
-			std::ostream& textstream(std::ostream& os, const bool bracketed = false) override {
-				const string color = RANDOM_COLOR();
+			std::ostream& textstream(std::ostream& os, const bool bracketed = false, const Bracket bracket = Bracket::NONE) override {
 
 				if (min == max) {
 					if (min == 0) {
-						os << color << "{" << COLOR_END;
-						return  child->textstream(os, true) << color << "}" << COLOR_END;
+						os <<  "{" ;
+						return  child->textstream(os, true) <<  "}" ;
 					}
 					else if (min == 1) {
 						// Pass through
-						return  child->textstream(os, bracketed);
+						return  child->textstream(os, bracketed, bracket);
 					}
 					else {
 						os << to_string(min) << " * ";
@@ -430,8 +432,8 @@ namespace flock {
 						os << to_string(min) << " * ";
 						child->textstream(os) << ", ";
 					}
-					os << to_string(max) << " * " << color << "[" << COLOR_END;;
-					return child->textstream(os, true) << color << "]" << COLOR_END;;
+					os << to_string(max) << " * " <<  "[";
+					return child->textstream(os, true) <<  "]";
 				}
 			}
 		protected:
@@ -471,32 +473,10 @@ namespace flock {
 
 		class AndRule : public BinaryRule {
 		public:
+			AndRule(_sp_vec<Rule> children) : BinaryRule(children) {}
 			AndRule(initializer_list<_sp<Rule>> children) : BinaryRule(children) {}
 			AndRule(_sp<Rule> left, _sp<Rule> right) : BinaryRule({ left, right }) {}
 
-			std::ostream& textstream(std::ostream& os, const bool bracketed = false) override {
-				if (children.size() == 1) {
-					// pass through
-					return children.back()->textstream(os, bracketed);
-				}
-				else {
-					string color = RANDOM_COLOR();
-					if (!bracketed) {
-						os << color << "(" << COLOR_END;
-					}
-					for (auto it = children.cbegin(); it != children.cend(); ++it) {
-
-						(*it)->textstream(os);
-						if (it < children.cend() - 1) {
-							os << " & ";
-						}
-					}
-					if (bracketed) {
-						return os;
-					}
-					return os << color << ")" << COLOR_END;
-				}
-			}
 		protected:
 			int evaluate(Tokens tokens, const int idx, _sp<RuleVisitor> visitor) override {
 				const int newIdx = children.at(0)->evaluate(tokens, idx, visitor);
@@ -510,35 +490,21 @@ namespace flock {
 				}
 				return newIdx;
 			}
+			std::ostream& textstream_seperator(std::ostream& os) override {
+				return os << " & ";
+			}
+
+			Bracket bracket() override {
+				return Bracket::AND;
+			}
 		};
 
 		class OrRule : public BinaryRule {
 		public:
+			OrRule(_sp_vec<Rule> children) : BinaryRule(children) {}
 			OrRule(initializer_list<_sp<Rule>> children) : BinaryRule(children) {}
 			OrRule(_sp<Rule> left, _sp<Rule> right) : BinaryRule({ left, right }) {}
-			std::ostream& textstream(std::ostream& os, const bool bracketed = false) override {
-				if (children.size() == 1) {
-					// pass through
-					return children.back()->textstream(os, bracketed);
-				}
-				else {
-					string color = RANDOM_COLOR();
-					if (!bracketed) {
-						os << color << "(" << COLOR_END;
-					}
-					for (auto it = children.cbegin(); it != children.cend(); ++it) {
 
-						(*it)->textstream(os);
-						if (it < children.cend() - 1) {
-							os << " | ";
-						}
-					}
-					if (bracketed) {
-						return os;
-					}
-					return os << color << ")" << COLOR_END;
-				}
-			}
 		protected:
 			int evaluate(Tokens tokens, const int idx, _sp<RuleVisitor> visitor) override {
 				for (auto rule = begin(children); rule != end(children); ++rule) {
@@ -549,37 +515,21 @@ namespace flock {
 				}
 				return FAILURE;
 			}
+			std::ostream& textstream_seperator(std::ostream& os) override {
+				return os << " | ";
+			}
+			Bracket bracket() override {
+				return Bracket::OR;
+			}
 		};
 
 
 		class XorRule : public BinaryRule {
 		public:
+			XorRule(_sp_vec<Rule> children) : BinaryRule(children) {}
 			XorRule(initializer_list<_sp<Rule>> children) : BinaryRule(children) {}
 			XorRule(_sp<Rule> left, _sp<Rule> right) : BinaryRule({ left, right }) {}
-	
-			std::ostream& textstream(std::ostream& os, const bool bracketed = false) override {
-				if (children.size() == 1) {
-					// pass through
-					return children.back()->textstream(os, bracketed);
-				}
-				else {
-					string color = RANDOM_COLOR();
-					if (!bracketed) {
-						os << color << "(" << COLOR_END;
-					}
-					for (auto it = children.cbegin(); it != children.cend(); ++it) {
 
-						(*it)->textstream(os);
-						if (it < children.cend() - 1) {
-							os << " ^ ";
-						}
-					}
-					if (bracketed) {
-						return os;
-					}
-					return os << color << ")" << COLOR_END;
-				}
-			}
 		protected:
 			int evaluate(Tokens tokens, const int idx, _sp<RuleVisitor> visitor) override {
 				int successIdx = FAILURE;
@@ -596,36 +546,20 @@ namespace flock {
 				}
 				return successIdx;
 			}
+			std::ostream& textstream_seperator(std::ostream& os) override {
+				return os << " ^ ";
+			}
+			Bracket bracket() override {
+				return Bracket::XOR;
+			}
 		};
 
 		class SequentialRule : public BinaryRule {
 		public:
+			SequentialRule(_sp_vec<Rule> children) : BinaryRule(children) {}
 			SequentialRule(initializer_list<_sp<Rule>> children) : BinaryRule(children) {}
 			SequentialRule(_sp<Rule> left, _sp<Rule> right) : BinaryRule({ left, right }) {}
-			
-			std::ostream& textstream(std::ostream& os, const bool bracketed = false) override {
-				if (children.size() == 1) {
-					// pass through
-					return children.back()->textstream(os, bracketed);
-				}
-				else {
-					string color = RANDOM_COLOR();
-					if (!bracketed) {
-						os << color << "(" << COLOR_END;
-					}
-					for (auto it = children.cbegin(); it != children.cend(); ++it) {
 
-						(*it)->textstream(os);
-						if (it < children.cend() - 1) {
-							os << ", ";
-						}
-					}
-					if (bracketed) {
-						return os;
-					}
-					return os << color << ")" << COLOR_END;
-				}
-			}
 		protected:
 			int evaluate(Tokens tokens, const int idx, _sp<RuleVisitor> visitor) override {
 				int newIdx = idx;
@@ -638,6 +572,12 @@ namespace flock {
 				}
 				return newIdx;
 			}
+			std::ostream& textstream_seperator(std::ostream& os) override {
+				return os << ", ";
+			}
+			Bracket bracket() override {
+				return Bracket::SEQ;
+			}
 		};
 
 		/// <summary>
@@ -646,14 +586,11 @@ namespace flock {
 		class AnyRule : public Rule {
 		public:
 			int evaluate(Tokens tokens, const int idx, _sp<RuleVisitor> visitor) override {
-				return idx+1;
+				return idx + 1;
 			}
-			std::ostream& textstream(std::ostream& os, const bool bracketed = false) override {
-				return os << *this;
+			std::ostream& textstream(std::ostream& os, const bool bracketed = false, const Bracket bracket = Bracket::NONE) override {
+				return os << COLOR_CYAN << "? Any ?" << COLOR_END;
 			}
-			friend std::ostream& operator<<(std::ostream& os, const AnyRule& rule) {
-				return os << "Any";
-			};
 		};
 
 		/// <summary>
@@ -665,7 +602,7 @@ namespace flock {
 		public:
 			AnyButRule(_sp<Rule> child) : UnnaryRule(child) {}
 
-			std::ostream& textstream(std::ostream& os, const bool bracketed = false) override {
+			std::ostream& textstream(std::ostream& os, const bool bracketed = false, const Bracket bracket = Bracket::NONE) override {
 				os << "-";
 				return child->textstream(os);
 			}
@@ -673,9 +610,25 @@ namespace flock {
 			int evaluate(Tokens tokens, const int idx, _sp<RuleVisitor> visitor) override {
 				const int newIdx = child->evaluate(tokens, idx, visitor);
 				if (newIdx == FAILURE) {
-					return idx+1;
+					return idx + 1;
 				}
 				return FAILURE;
+			}
+		};
+		/// <summary>
+		/// Automatically passes, and increments by one.
+		/// </summary>
+		class EOFRule : public Rule {
+		public:
+			int evaluate(Tokens tokens, const int idx, _sp<RuleVisitor> visitor) override {
+				if (tokens->poll(idx)->character == -1) {
+					return 0;
+				}
+				return FAILURE;
+			}
+
+			std::ostream& textstream(std::ostream& os, const bool bracketed = false, const Bracket bracket = Bracket::NONE) override {
+				return os << COLOR_CYAN << "? EOF ?" << COLOR_END;
 			}
 		};
 
@@ -696,25 +649,31 @@ namespace flock {
 		static _sp<CollectingRule> collect(string type, _sp<Rule> rule) {
 			return make_shared<CollectingRule>(CollectingRule(rule, type));
 		}
-		static _sp<EqualTypeRule> equal(initializer_list<token::RawType> values) {
-			return make_shared<EqualTypeRule>(EqualTypeRule(values));
-		}
-		static _sp<EqualTypeRule> equal(token::RawType value) {
-			return equal({ value });
-		}
+
 		static _sp<EqualStringRule> equal(initializer_list<string > values) {
 			return make_shared<EqualStringRule>(EqualStringRule(values));
 		}
 		static _sp<EqualStringRule> equal(string value) {
 			return equal({ value });
 		}
-		static _sp<HasCharRule> has_char(initializer_list<int> values, const int pos = 0) {
-			return make_shared<HasCharRule>(HasCharRule(values, pos));
+		static _sp<EqualCharRule> equal(initializer_list<int> values, const int pos = 0) {
+			return make_shared<EqualCharRule>(EqualCharRule(values, pos));
+		}
+		static _sp<EqualCharRule> equal(vector<int> values, const int pos = 0) {
+			return make_shared<EqualCharRule>(EqualCharRule(values, pos));
+		}
+		static _sp<EqualCharRule> equal(int value, const int pos = 0) {
+			return equal({ value }, pos);
+		}
+		static _sp<EqualCharRule> equalRange(int start, int end) {
+			vector<int> list((end - start) + 1);
+			iota(std::begin(list), std::end(list), start);
+			return equal(list);
+		}
+		static _sp<EOFRule> eof() {
+			return make_shared<EOFRule>(EOFRule());
 		}
 
-		static _sp<HasCharRule> has_char(int value, const int pos = 0) {
-			return has_char({ value }, pos);
-		}
 
 		static _sp<NotRule> r_not(_sp<Rule> rule) {
 			return make_shared<NotRule>(NotRule(rule));
@@ -768,79 +727,67 @@ namespace flock {
 		static _sp<GrammarRule> grammar(string grammer) {
 			return make_shared<GrammarRule>(GrammarRule(grammer));
 		}
-		static _sp<HasCharRule> symbol(initializer_list<int> values) {
-			//return r_and(equal(token::RawType::Punctuation), has_char(values));
-			return has_char(values);
+		static _sp<EqualCharRule> new_line() {
+			return  equal({ '\n', '\r' });
 		}
-		static _sp<HasCharRule> symbol(int value) {
-			return symbol({ value });
+		static _sp<EqualCharRule> blank() {
+			return  equal({ ' ', '\t', '\v', '\f' });
 		}
-		static _sp<EqualStringRule> keyword(string value) {
-			//return r_and(equal(token::RawType::Alpha), equal({ value }));
-			return equal({ value });
+		static _sp<OrRule> whitespace() {
+			return  r_or(blank(), new_line());
 		}
-		static _sp<EqualStringRule> keyword(initializer_list<string> values) {
-			// return r_and(equal(token::RawType::Alpha), equal(values));
-			return equal({ values });
+		static _sp<EqualCharRule> uppercase_alpha() {
+			return  equalRange('A', 'Z');
 		}
-		static _sp<EqualTypeRule> alpha() {
-			return  equal(token::RawType::Alpha);
+		static _sp<EqualCharRule> lowercase_alpha() {
+			return  equalRange('a', 'z');
 		}
-		static _sp<EqualTypeRule> number() {
-			return  equal(token::RawType::Integer);
+		static _sp<OrRule> alpha() {
+			return  r_or(uppercase_alpha(), lowercase_alpha());
 		}
-		static _sp<RepeatRule> alphanum(const int min = 0, const int max = 0) {
-			return  repeat(r_or(alpha(), number()), min, max);
-		}
-		static _sp<EqualTypeRule> eof() {
-			return  equal(token::RawType::Eof);
-		}
-		static _sp<RepeatRule> whitespace(const int min = 0, const int max = 0) {
-			return repeat(equal(token::RawType::Whitespace), min, max);
-		}
-		static _sp<RepeatRule> newline(const int min = 0, const int max = 0) {
-			return repeat(equal(token::RawType::NewLine), min, max);
-		}
-		static _sp<RepeatRule> whitespace_all(const int min = 0, const int max = 0) {
-			return repeat(r_or(equal(token::RawType::Whitespace), equal(token::RawType::NewLine), eof()), min, max);
+		static _sp<EqualCharRule> digit() {
+			return  equalRange('0', '9');
 		}
 
 		// Operator overloads
 
-		template<class L = Rule*, class R = Rule*>
-		static _sp<OrRule> operator||(const L left, const  R right) {
+		template<class L = Rule, class R = Rule>
+		static _sp<OrRule> operator||(const _sp<L> left, const  _sp <R> right) {
 			return r_or({ left, right });
 		}
-		template<class L = Rule*, class R = Rule*>
-		static _sp<AndRule> operator&&(const L left, const  R right) {
+		template<class L = Rule, class R = Rule>
+		static _sp<AndRule> operator&&(const _sp<L> left, const  _sp <R> right) {
 			return r_and({ left, right });
 		}
-		template<class L = Rule*, class R = Rule*>
-		static _sp<AndRule> operator^(const L left, const  R right) {
+		template<class L = Rule, class R = Rule>
+		static _sp<AndRule> operator^(const _sp<L> left, const  _sp <R> right) {
 			return r_xor({ left, right });
 		}
-		template<class C = Rule*>
-		static _sp<NotRule> operator!(const C child) {
+
+		template<class R = Rule>
+		static _sp<NotRule> operator!(const _sp<R> child) {
 			return r_not(child);
 		}
 
-		template<class C = Rule*>
-		static _sp<OptionalRule> operator~(const C child) {
+		template<class R = Rule>
+		static _sp<OptionalRule> operator~(const _sp<R> child) {
 			return option(child);
 		}
 
-		template<class L = Rule*, class R = Rule*>
-		static _sp<SequentialRule> operator>>(const L left, const  R right) {
+		template<class L = Rule, class R = Rule>
+		static _sp<SequentialRule> operator>>(const _sp<L> left, const  _sp <R> right) {
 			return seq({ left, right });
 		}
-
-		template<class L = Rule*>
-		static _sp<SequentialRule> operator>>(const L left, const string right) {
-			return seq({ left, make_shared<GrammarRule>(GrammarRule(right)) });
+		template<class L = Rule>
+		static _sp<SequentialRule> operator>>(const _sp<L> left, const string right) {
+			return seq(left, make_shared<GrammarRule>(GrammarRule(right)));
 		}
-		template<class R = Rule*>
-		static _sp<SequentialRule> operator>>(const string left, const R right) {
-			return seq({ make_shared<GrammarRule>(GrammarRule(left)), right });
+		template<class R = Rule>
+		static _sp<SequentialRule> operator>>(const string left, const _sp<R> right) {
+			return seq(make_shared<GrammarRule>(GrammarRule(left)), right);
+		}
+		static _sp<SequentialRule> operator>>(const string left, const string right) {
+			return seq({ make_shared<GrammarRule>(GrammarRule(left)), make_shared<GrammarRule>(GrammarRule(right)) });
 		}
 
 
@@ -850,6 +797,16 @@ namespace flock {
 			return rule(symbol, seq(expressions));
 		}
 
+		_sp <Rule> Library::rules(const string symbol, _sp <Rule> expression) {
+			rule(symbol, expression);
+			rule(symbol + "+", { grammar(symbol), repeat(grammar(symbol)) });
+			rule(symbol + "*", repeat(grammar(symbol)));
+			rule(symbol + "?", option(grammar(symbol)));
+			return expression;
+		}
+		_sp <Rule> Library::rules(const string symbol, initializer_list<_sp<Rule>> expressions) {
+			return rules(symbol, seq(expressions));
+		}
 	}
 }
 #endif

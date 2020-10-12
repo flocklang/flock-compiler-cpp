@@ -24,12 +24,14 @@
 #include "ConsoleCharSupplier.h"
 #include "FlockGrammar.h"
 
+using namespace std;
 using namespace flock;
 using namespace flock::token;
 
 
 static void MainLoop() {
 	ConsoleCharSupplier consoleSupplier;
+	_sp<LocationSupplier> locationSupplier  = make_shared<LocationSupplier>(LocationSupplier(&consoleSupplier));
 	RawTokenizer *rawTokenizer = new RawTokenizer(&consoleSupplier);
 
 	LexTokenizer lexTokenizer(rawTokenizer);

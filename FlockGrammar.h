@@ -29,21 +29,27 @@ namespace flock {
 		using R = _sp<Rule>;
 		static Library createFlockLibrary() {
 			Library library;
-			// identifierEnd ::= alpha | number | '_' | '$'
-			R identifierEnd = r_or({ alpha(),number(),symbol('_'),symbol('$')});
-			// identifierBegin ::= alpha | ( '_',  identifierEnd)
-			R identifierBegin = alpha() || (symbol('_') >> identifierEnd);
 
-			/// identifier ::= identifierBegin, (identifierEnd)*
+			library.rules("newline", new_line());
+			library.rules("whitespace", whitespace());
+			library.rules("digit", digit());
+			library.rules("alpha", alpha());
+			library.rules("alphanum", r_or(grammar("alpha"), grammar("digit")));
+			library.rule("integer", grammar("digit+"));
+			library.rule("decimal", { grammar("digit+"), equal('.'), grammar("digit+"), r_not({equal('.'), grammar("digit+")}) });
+
+			// identifierEnd ::= alpha | number | '_' | '$'
+			R identifierEnd = r_or({ grammar("alpha+"),grammar("digit+"),equal('_', '$')});
+			// identifierBegin ::= alpha | ( '_',  identifierEnd)
+			R identifierBegin = grammar("alpha") || (equal('_') >> identifierEnd);
+			/// identifier ::= identifierBegin, {identifierEnd}
 			library.rule("identifier", identifierBegin >> repeat(identifierEnd));
 
-			library.rule("integer", number());
-			library.rule("decimal", { number(), symbol('.'), number(), r_not({symbol('.'), number()}) });
 			library.rule("number", grammar("decimal") || grammar("integer"));
 			// probably capture escapes as we go through.
-			library.rule("string", { symbol('"') , repeat(anybut({anybut(symbol('\\')), symbol('"') }) )});
+			library.rule("string", { equal('"') , repeat(r_or(seq(equal('\\'), any()), anybut(equal('"')))), equal('"') });
 
-			library.rule("use", seq({ keyword("use") , whitespace() , option({ symbol('('), whitespace(), grammar("identifier"), whitespace(), symbol(')') }) }));
+			library.rule("use", seq({ equal("use") , grammar("whitespace*") , option({ equal('('), grammar("whitespace*"), grammar("identifier"), grammar("whitespace*"), equal(')') }) }));
 			return library;
 		};
 		

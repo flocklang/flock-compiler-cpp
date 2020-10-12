@@ -24,10 +24,11 @@
 namespace flock {
 	using namespace source;
 	namespace supplier {
-		class LocationSupplier : public CachedSupplier <Location, std::shared_ptr<Range>> {
+		class LocationSupplier : public CachedSupplier <Location, _sp<Range>> {
 		public:
 			LocationSupplier(Supplier<int>* charSupplier) : charSupplier(charSupplier) {}
-			std::shared_ptr<Range> pollRange(const int amount = 1, const int startIdx = 0) override {
+
+			_sp<Range> pollRange(const int amount = 1, const int startIdx = 0) override {
 				auto option = poll(startIdx);
 				if (!option) {
 					return nullptr;
@@ -47,7 +48,7 @@ namespace flock {
 				return std::make_shared<Range>(*range);
 			};
 
-			std::shared_ptr<Location> supply() override
+			_sp<Location> supply() override
 			{
 				int next = charSupplier->supply();
 				if (next == EOF) {
@@ -63,7 +64,7 @@ namespace flock {
 			}
 
 		protected:
-			std::shared_ptr<Location> previous = nullptr;
+			_sp<Location> previous = nullptr;
 			Supplier<int> * charSupplier;
 		};
 
