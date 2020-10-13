@@ -18,41 +18,49 @@
 
 #include "Supplier.h"
 #include <iostream>
+#include <string>
 
 namespace flock {
 	namespace supplier {
 		class ConsoleCharSupplier : public Supplier <int> {
 		public:
+			ConsoleCharSupplier() : ConsoleCharSupplier("") {}
+			ConsoleCharSupplier(const string end) : end(end) {}
 			void clear() {
-				lineFinished = false;
+				inputComplete = false;
 				line = "";
 				pos = 0;
-				size = 0;
+				size = -1;
 			}
 		protected:
 			int supply() override {
-				if (lineFinished) {
-					return -1;
+				if (inputComplete) {
+					return EOF;
 				}
 				else {
-					if (pos >= size) {
+					if (pos > size) {
 						getline(std::cin, line);
 						pos = 0;
 						size = line.size();
+					}
+					if (line == end) {
+						inputComplete = true;
+						return EOF;
 					}
 
 					if (pos < size) {
 						int c = line.at(pos++);
 						return c;
 					}
-					lineFinished = true;
+					pos++; // pos should be equal to size, so we needd to increment to ensure pos > size.
 					return '\n';
 				}
 			}
 			std::string line;
 			int pos = 0;
-			int size = 0;
-			bool lineFinished = false;
+			int size = -1;
+			bool inputComplete = false;
+			const string end;
 		};
 
 	}

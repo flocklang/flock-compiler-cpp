@@ -64,10 +64,12 @@ namespace flock {
 		/// </summary>
 		class Library : public  map<const string, _sp<Rule>>{
 		public:
-			_sp <Rule> rule(const string symbol, _sp <Rule> expression) {
+			_sp <Rule> part(const string symbol, _sp <Rule> expression) {
 				emplace(symbol, expression);
 				return expression;
 			}
+			_sp <Rule> part(const string symbol, initializer_list<_sp<Rule>> expressions);
+			_sp <Rule> rule(const string symbol, _sp <Rule> expression);
 			_sp <Rule> rule(const string symbol, initializer_list<_sp<Rule>> expressions);
 
 			_sp<Rule> rule(const string symbol) {
@@ -94,10 +96,41 @@ namespace flock {
 			void fill(_sp<Range> rangeToSet) {
 				range = rangeToSet;
 			}
-			_sp<Range> range = nullptr;
-			_sp_vec<SyntaxNode> children;
+			_sp_vec<SyntaxNode> getChildren() {
+				return children;
+			}
+			_sp<Range> getRange() {
+				if (range == nullptr) {
+					range = getChildrenRange();
+				}
+				return range;
+			}
+			
 		protected:
 			string type;
+			_sp<Range> range = nullptr;
+			_sp_vec<SyntaxNode> children;
+
+			_sp<Range> getChildrenRange() {
+
+				if (children.empty()) {
+					return nullptr;
+				}
+				auto option = children.at(0);
+				if (!option || option->range) {
+					return nullptr;
+				}
+				_sp<Range> range = option->range;
+				for (int i = 1; i < children.size(); i++) {
+					auto option = children.at(i);
+
+					if (!option || option->range) {
+						return range;
+					}
+					range = std::make_shared<Range>(Range(range, option->range));
+				}
+				return range;
+			}
 		};
 
 
@@ -116,11 +149,14 @@ namespace flock {
 			void accept(_sp <Range> range) {
 				syntaxNode->fill(range);
 			}
+			_sp<SyntaxNode> getNode() {
+				return syntaxNode;
+			}
 			_sp<Rule> rule(string ruleName) {
 				return library->rule(ruleName);
 			}
-			_sp<SyntaxNode> syntaxNode;
 		protected:
+			const _sp<SyntaxNode> syntaxNode;
 			const _sp<Library> library;
 
 		};
@@ -134,14 +170,16 @@ namespace flock {
 				_sp<RuleVisitor> evaluator = std::make_shared<RuleVisitor>(RuleVisitor(name, library));
 				int newIdx = lib_rule.second->evaluate(tokens, 0, evaluator);
 				if (newIdx > idx) {
-					currentNode = evaluator->syntaxNode;
+					currentNode = evaluator->getNode();
 					evaluator->accept(tokens->pollRange(newIdx, 0));
 					successfullRule = name;
 					idx = newIdx;
 				}
 				//evaluate(Tokens tokens, const int idx, _sp<RuleVisitor> visitor)
 			}
-			tokens->popRange(idx);
+			if (idx > 0) {
+				tokens->popRange(idx);
+			}
 			return std::make_pair(successfullRule, currentNode);
 		}
 		// Base Rules
@@ -216,6 +254,9 @@ namespace flock {
 				const int amount = newIdx - idx;
 				if (amount > 0) {
 					_sp<Range> range = tokens->pollRange(amount, idx);
+					if (!range) {
+						return FAILURE;
+					}
 					newVisitor->accept(range);
 					visitor->accept(newVisitor);
 					return newIdx;
@@ -240,7 +281,7 @@ namespace flock {
 				if (rule == nullptr) {
 					return FAILURE;
 				}
-				return CollectingRule(rule, collectName).evaluate(tokens, idx, visitor);
+				return rule->evaluate(tokens, idx, visitor);
 			}
 
 			std::ostream& textstream(std::ostream& os, const bool bracketed = false, const Bracket bracket = Bracket::NONE) override {
@@ -360,7 +401,6 @@ namespace flock {
 			OptionalRule(_sp<Rule> child) : UnnaryRule(child) {}
 
 			std::ostream& textstream(std::ostream& os, const bool bracketed = false, const Bracket bracket = Bracket::NONE) override {
-				;
 				os << "[";
 				return child->textstream(os, true) <<  "]" ;
 			}
@@ -572,7 +612,11 @@ namespace flock {
 		class AnyRule : public Rule {
 		public:
 			int evaluate(Tokens tokens, const int idx, _sp<RuleVisitor> visitor) override {
-				return idx + 1;
+				auto loc = tokens->poll(idx);
+				if ((!loc) || loc->character == EOF) {
+					return FAILURE;
+				}
+				return idx+1;
 			}
 			std::ostream& textstream(std::ostream& os, const bool bracketed = false, const Bracket bracket = Bracket::NONE) override {
 				return os <<  colourize(Colour::CYAN,  "? Any ?");
@@ -607,8 +651,9 @@ namespace flock {
 		class EOFRule : public Rule {
 		public:
 			int evaluate(Tokens tokens, const int idx, _sp<RuleVisitor> visitor) override {
-				if (tokens->poll(idx)->character == -1) {
-					return 0;
+				auto loc = tokens->poll(idx);
+				if ((!loc) || loc->character == EOF) {
+					return idx;
 				}
 				return FAILURE;
 			}
@@ -812,9 +857,16 @@ namespace flock {
 
 		// because declration order is a thing in c++
 
+		_sp <Rule> Library::rule(const string symbol, _sp <Rule> expression) {
+			return part(symbol, collect(symbol, expression));
+		}
 		_sp <Rule> Library::rule(const string symbol, initializer_list<_sp<Rule>> expressions) {
 			return rule(symbol, seq(expressions));
 		}
+		_sp <Rule> Library::part(const string symbol, initializer_list<_sp<Rule>> expressions) {
+			return part(symbol, seq(expressions));
+		}
+
 
 		/*_sp <Rule> Library::rules(const string symbol, _sp <Rule> expression) {
 			rule(symbol, expression);

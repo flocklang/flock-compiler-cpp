@@ -35,20 +35,22 @@ static void MainLoop( _sp<grammar::Library> library) {
 	_sp<LocationSupplier> locationSupplier  = make_shared<LocationSupplier>(LocationSupplier(&consoleSupplier));
 
 	while (true) {
-		consoleSupplier.clear();
-		locationSupplier->clear();
 		fprintf(stderr, "\nready> ");
 		std::pair<string, _sp<grammar::SyntaxNode>> ret = grammar::evaluateAgainstAllRules(locationSupplier, library);
 
 		string ruleName = get<0>(ret);
+		if (ruleName.empty()) {
+			consoleSupplier.clear();
+			locationSupplier->clear();
+		} else {
+			std::cout << "Rule: " << ruleName;
 
-		std::cout << "Rule: " << ruleName;
-
-		_sp<grammar::SyntaxNode> syntaxNode = get<1>(ret);
-		if (syntaxNode) {
-			std::cout << " " << *(syntaxNode->range);
+			_sp<grammar::SyntaxNode> syntaxNode = get<1>(ret);
+			if (syntaxNode) {
+				std::cout << " " << *(syntaxNode->getRange());
+			}
+			std::cout << "\n";
 		}
-		std::cout << "\n";
 	}
 }
 

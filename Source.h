@@ -54,14 +54,14 @@ namespace flock {
 
 		struct Range {
 			Range(const int character) : Range{ std::make_shared<Location>(Location(character)) } {};
-			Range(const std::shared_ptr < Location> start) : start{ start }, end{ start } {
+			Range( std::shared_ptr < Location> start) : start{ start }, end{ start } {
 				source.push_back(start->character); 
 			};
-			Range(const std::shared_ptr < Location> start, const std::shared_ptr < Location> end) : start{ start }, end{ end } {
+			Range( std::shared_ptr < Location> start,  std::shared_ptr < Location> end) : start{ start }, end{ end } {
 				source.push_back(start->character);
 				source.push_back(end->character);
 			};
-			Range(const Range start, const std::shared_ptr < Location> end) : start{ start.start }, end{ end } {
+			Range(const Range start,  std::shared_ptr < Location> end) : start{ start.start }, end{ end } {
 				source.append(start.source);
 				source.push_back(end->character);
 			};
@@ -69,7 +69,7 @@ namespace flock {
 				source.append(start.source);
 				source.append(end.source);
 			};
-			Range(const std::shared_ptr < Range> start, const std::shared_ptr < Range> end) : start{ start->start }, end{ end->end } {
+			Range( std::shared_ptr < Range> start,  std::shared_ptr < Range> end) : start{ start->start }, end{ end->end } {
 				source.append(start->source);
 				source.append(end->source);
 			};

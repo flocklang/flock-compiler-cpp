@@ -30,11 +30,11 @@ namespace flock {
 		static Library createFlockLibrary() {
 			Library library;
 
-			library.rule("newline", new_line());
-			library.rule("whitespace", whitespace());
-			library.rule("digit", digit());
-			library.rule("alpha", alpha());
-			library.rule("alphanum", r_or(grammar("alpha"), grammar("digit")));
+			library.part("newline", new_line());
+			library.part("whitespace", whitespace());
+			library.part("digit", digit());
+			library.part("alpha", alpha());
+			library.part("alphanum", r_or(grammar("alpha"), grammar("digit")));
 			library.rule("integer", grammar("digit+"));
 			library.rule("decimal", { grammar("digit+"), equal('.'), grammar("digit+"), r_not({equal('.'), grammar("digit+")}) });
 

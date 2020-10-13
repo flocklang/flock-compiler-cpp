@@ -33,17 +33,14 @@ namespace flock {
 				if (!option) {
 					return nullptr;
 				}
-				Range * range =  new Range(option);
-				int nextId = startIdx + 1;
-				int count = amount - 1;
-				while (count-- > 0) {
-					auto option = poll(nextId++);
+				Range* range = new Range(option);
+				for (int nextId = startIdx + 1; nextId < startIdx + amount; nextId++) {
+					auto option = poll(nextId);
 
 					if (!option) {
 						return std::make_shared<Range>(*range);
 					}
-					range = new Range(*range,option);
-
+					range = new Range(*range, option);
 				}
 				return std::make_shared<Range>(*range);
 			};
@@ -52,9 +49,9 @@ namespace flock {
 			{
 				int next = charSupplier->supply();
 				if (next == EOF) {
-					return nullptr;
+					previous = nullptr;
 				}
-				if (previous ) {
+				else if (previous) {
 					previous = std::make_shared<Location>(Location::next(*previous, next));
 				}
 				else {
@@ -69,7 +66,7 @@ namespace flock {
 
 		protected:
 			_sp<Location> previous = nullptr;
-			Supplier<int> * charSupplier;
+			Supplier<int>* charSupplier;
 		};
 
 	}
