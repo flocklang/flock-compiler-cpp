@@ -17,6 +17,7 @@
 #define FLOCK_COMPILER_GRAMMAR_H
 #include "Util.h"
 #include "LocationSupplier.h"
+#include "ConsoleFormat.h"
 #include <vector>
 #include <map>
 #include <string>
@@ -28,6 +29,7 @@
 using namespace std;
 namespace flock {
 	using namespace source;
+	using namespace colour;
 	namespace grammar {
 		// forwad declerations as we have cyclic dependencies on declaration.
 		class Rule;
@@ -38,41 +40,7 @@ namespace flock {
 			NONE, SEQ, OR, AND, XOR
 		};
 
-		const static string COLOR_END = "\033[0m";
-		const static string COLOR_DARK_RED = "\x1B[31m";
-		const static string COLOR_DARK_GREEN = "\x1B[32m";
-		const static string COLOR_DARK_YELLOW = "\x1B[33m";
-		const static string COLOR_DARK_BLUE = "\x1B[34m";
-		const static string COLOR_DARK_MAGENTA = "\x1B[35m";
-		const static string COLOR_DARK_CYAN = "\x1B[36m";
-		const static string COLOR_RED = "\x1B[91m";
-		const static string COLOR_GREEN = "\x1B[92m";
-		const static string COLOR_YELLOW = "\x1B[93m";
-		const static string COLOR_BLUE = "\x1B[94m";
-		const static string COLOR_MAGENTA = "\x1B[95m";
-		const static string COLOR_CYAN = "\x1B[96m";
-		// blue is just too dark
-		const static string COLORS[] = {
-			COLOR_DARK_RED,
-			COLOR_DARK_GREEN,
-			COLOR_DARK_YELLOW,
-			COLOR_DARK_BLUE,
-			COLOR_DARK_MAGENTA,
-			COLOR_DARK_CYAN,
-			COLOR_RED,
-			COLOR_GREEN,
-			COLOR_YELLOW,
-			COLOR_BLUE,
-			COLOR_MAGENTA,
-			COLOR_CYAN
-		};
-		const static int NUM_OF_COLORS = sizeof(COLORS) / sizeof(COLORS[0]);
-
-		static string RANDOM_COLOR() {
-			return COLORS[rand() % NUM_OF_COLORS];
-		}
-
-		using Tokens = supplier::CachedSupplier <Location, _sp<Range>>*;
+		using Tokens = _sp<supplier::CachedSupplier <Location, _sp<Range>>>;
 		static const int FAILURE = -1;
 
 
@@ -94,15 +62,13 @@ namespace flock {
 		/// <summary>
 		/// <symbol> : <expression>
 		/// </summary>
-		class Library : public  map<const string, _sp<Rule>> {
+		class Library : public  map<const string, _sp<Rule>>{
 		public:
-			_sp <Rule> rules(const string symbol, _sp <Rule> expression);
 			_sp <Rule> rule(const string symbol, _sp <Rule> expression) {
 				emplace(symbol, expression);
 				return expression;
 			}
 			_sp <Rule> rule(const string symbol, initializer_list<_sp<Rule>> expressions);
-			_sp <Rule> rules(const string symbol, initializer_list<_sp<Rule>> expressions);
 
 			_sp<Rule> rule(const string symbol) {
 				return at(symbol);
@@ -111,7 +77,7 @@ namespace flock {
 			friend std::ostream& operator<<(std::ostream& os, const Library& library) {
 				for (const auto& p : library)
 				{
-					os << COLOR_DARK_GREEN << p.first << COLOR_END << " = ";
+					os << colourize(Colour::GREEN, p.first) << " = ";
 					p.second->textstream(os, true) << " ;\n";
 				}
 				return os;
@@ -126,11 +92,11 @@ namespace flock {
 				children.push_back(syntaxNode);
 			}
 			void fill(_sp<Range> rangeToSet) {
-				this->range = rangeToSet;
+				range = rangeToSet;
 			}
-		protected:
-			_sp_vec<SyntaxNode> children;
 			_sp<Range> range = nullptr;
+			_sp_vec<SyntaxNode> children;
+		protected:
 			string type;
 		};
 
@@ -151,14 +117,33 @@ namespace flock {
 				syntaxNode->fill(range);
 			}
 			_sp<Rule> rule(string ruleName) {
-				library->rule(ruleName);
+				return library->rule(ruleName);
 			}
-		protected:
 			_sp<SyntaxNode> syntaxNode;
+		protected:
 			const _sp<Library> library;
 
 		};
 
+		std::pair<string, _sp<SyntaxNode>> evaluateAgainstAllRules(Tokens tokens, _sp<Library> library) {
+			int idx = FAILURE;
+			_sp<SyntaxNode> currentNode = nullptr;
+			string successfullRule;
+			for (const auto& lib_rule : *library) {
+				const string name = lib_rule.first;
+				_sp<RuleVisitor> evaluator = std::make_shared<RuleVisitor>(RuleVisitor(name, library));
+				int newIdx = lib_rule.second->evaluate(tokens, 0, evaluator);
+				if (newIdx > idx) {
+					currentNode = evaluator->syntaxNode;
+					evaluator->accept(tokens->pollRange(newIdx, 0));
+					successfullRule = name;
+					idx = newIdx;
+				}
+				//evaluate(Tokens tokens, const int idx, _sp<RuleVisitor> visitor)
+			}
+			tokens->popRange(idx);
+			return std::make_pair(successfullRule, currentNode);
+		}
 		// Base Rules
 
 
@@ -221,6 +206,7 @@ namespace flock {
 		public:
 			CollectingRule(_sp<Rule> child, string collectName) : UnnaryRule(child), collectName(collectName) {}
 			CollectingRule(_sp<Rule> child) : UnnaryRule(child) {}
+
 			int evaluate(Tokens tokens, const int idx, _sp<RuleVisitor> visitor) override {
 				_sp<RuleVisitor> newVisitor = visitor->prepareCollectingVisitor(collectName);
 				const int newIdx = child->evaluate(tokens, idx, newVisitor);
@@ -237,7 +223,7 @@ namespace flock {
 				return idx;
 			}
 			std::ostream& textstream(std::ostream& os, const bool bracketed = false, const Bracket bracket = Bracket::NONE) override {
-				return os << COLOR_DARK_GREEN << collectName << COLOR_END;
+				return os << colourize(Colour::GREEN, collectName);
 			}
 
 		protected:
@@ -258,7 +244,7 @@ namespace flock {
 			}
 
 			std::ostream& textstream(std::ostream& os, const bool bracketed = false, const Bracket bracket = Bracket::NONE) override {
-				return os << COLOR_DARK_GREEN << ruleName << COLOR_END;
+				return os << colourize(Colour::GREEN, ruleName);
 			}
 
 		protected:
@@ -278,7 +264,7 @@ namespace flock {
 				for (T value : values) {
 					int newIdx = contains(value, tokens, idx);
 					if (newIdx != FAILURE) {
-						return FAILURE;
+						return newIdx;
 					}
 				}
 				return FAILURE;
@@ -324,7 +310,7 @@ namespace flock {
 				return FAILURE;
 			}
 			std::ostream& textstream_value(std::ostream& os, string value) override {
-				return os << COLOR_DARK_RED << "\"" << value << "\"" << COLOR_END;
+				return os << "\""  << colourize(Colour::RED, value) << "\"";
 			}
 
 		};
@@ -350,19 +336,19 @@ namespace flock {
 			std::ostream& textstream_value(std::ostream& os, int value) override {
 				switch (value) {
 				case -1:
-					return os << COLOR_DARK_RED << "EOF" << COLOR_END;
+					return os << colourize(Colour::CYAN, "EOF");
 				case '\n':
-					return os << COLOR_DARK_RED << "'" << "\\n" << "'" << COLOR_END;
+					return os << "'" << colourize(Colour::RED, "\\n") << "'";
 				case '\r':
-					return os << COLOR_DARK_RED << "'" << "\\r" << "'" << COLOR_END;
+					return os << "'" << colourize(Colour::RED, "\\r") << "'";
 				case '\t':
-					return os << COLOR_DARK_RED << "'" << "\\t" << "'" << COLOR_END;
+					return os << "'" << colourize(Colour::RED, "\\t") << "'";
 				case '\v':
-					return os << COLOR_DARK_RED << "'" << "\\v" << "'" << COLOR_END;
+					return os << "'" << colourize(Colour::RED, "\\v") << "'";
 				case '\f':
-					return os << COLOR_DARK_RED << "'" << "\\f" << "'" << COLOR_END;
+					return os << "'" << colourize(Colour::RED, "\\f") << "'";
 				default:
-					return os << COLOR_DARK_RED << "'" << (char)value << "'" << COLOR_END;
+					return os << "'" << colourize(Colour::RED, value) << "'";
 				}
 			}
 		};
@@ -589,7 +575,7 @@ namespace flock {
 				return idx + 1;
 			}
 			std::ostream& textstream(std::ostream& os, const bool bracketed = false, const Bracket bracket = Bracket::NONE) override {
-				return os << COLOR_CYAN << "? Any ?" << COLOR_END;
+				return os <<  colourize(Colour::CYAN,  "? Any ?");
 			}
 		};
 
@@ -628,7 +614,7 @@ namespace flock {
 			}
 
 			std::ostream& textstream(std::ostream& os, const bool bracketed = false, const Bracket bracket = Bracket::NONE) override {
-				return os << COLOR_CYAN << "? EOF ?" << COLOR_END;
+				return os << colourize(Colour::CYAN, "? EOF ?");
 			}
 		};
 
@@ -721,11 +707,44 @@ namespace flock {
 		static _sp<OptionalRule> option(initializer_list<_sp<Rule>> rules) {
 			return option(seq(rules));
 		}
-		static _sp<GrammarRule> grammar(string grammer, string name) {
-			return make_shared<GrammarRule>(GrammarRule(grammer, name));
-		}
-		static _sp<GrammarRule> grammar(string grammer) {
-			return make_shared<GrammarRule>(GrammarRule(grammer));
+
+		/// <summary>
+		/// 
+		/// rule(symbol + "+", { grammar(symbol), repeat(grammar(symbol)) });
+		/// rule(symbol + "*", repeat(grammar(symbol)));
+		/// rule(symbol + "?", option(grammar(symbol)));
+		/// </summary>
+		/// <param name="grammer"></param>
+		/// <returns></returns>
+		static _sp<Rule> grammar(string grammerName) {
+			switch (grammerName.back()) {
+			case '*': {
+				string name = grammerName.substr(0, grammerName.length() - 1);
+				_sp<GrammarRule> grammarRule = make_shared<GrammarRule>(GrammarRule(name));
+				return repeat(grammarRule);
+			}
+			case '+': {
+				string name = grammerName.substr(0, grammerName.length() - 1);
+				_sp<GrammarRule> grammarRule = make_shared<GrammarRule>(GrammarRule(name));
+				return seq(grammarRule, repeat(grammarRule));
+			}
+			case '?': {
+				string name = grammerName.substr(0, grammerName.length() - 1);
+				_sp<GrammarRule> grammarRule = make_shared<GrammarRule>(GrammarRule(name));
+				return option(grammarRule);
+
+			}
+			case '-': {
+				string name = grammerName.substr(0, grammerName.length() - 1);
+				_sp<GrammarRule> grammarRule = make_shared<GrammarRule>(GrammarRule(name));
+				return anybut(grammarRule);
+			}
+				
+			default: {
+				return make_shared<GrammarRule>(GrammarRule(grammerName));
+			}
+
+			}
 		}
 		static _sp<EqualCharRule> new_line() {
 			return  equal({ '\n', '\r' });
@@ -751,7 +770,7 @@ namespace flock {
 
 		// Operator overloads
 
-		template<class L = Rule, class R = Rule>
+		/*template<class L = Rule, class R = Rule>
 		static _sp<OrRule> operator||(const _sp<L> left, const  _sp <R> right) {
 			return r_or({ left, right });
 		}
@@ -788,7 +807,7 @@ namespace flock {
 		}
 		static _sp<SequentialRule> operator>>(const string left, const string right) {
 			return seq({ make_shared<GrammarRule>(GrammarRule(left)), make_shared<GrammarRule>(GrammarRule(right)) });
-		}
+		}*/
 
 
 		// because declration order is a thing in c++
@@ -797,7 +816,7 @@ namespace flock {
 			return rule(symbol, seq(expressions));
 		}
 
-		_sp <Rule> Library::rules(const string symbol, _sp <Rule> expression) {
+		/*_sp <Rule> Library::rules(const string symbol, _sp <Rule> expression) {
 			rule(symbol, expression);
 			rule(symbol + "+", { grammar(symbol), repeat(grammar(symbol)) });
 			rule(symbol + "*", repeat(grammar(symbol)));
@@ -806,7 +825,7 @@ namespace flock {
 		}
 		_sp <Rule> Library::rules(const string symbol, initializer_list<_sp<Rule>> expressions) {
 			return rules(symbol, seq(expressions));
-		}
+		}*/
 	}
 }
 #endif

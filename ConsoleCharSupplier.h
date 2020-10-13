@@ -22,10 +22,37 @@
 namespace flock {
 	namespace supplier {
 		class ConsoleCharSupplier : public Supplier <int> {
+		public:
+			void clear() {
+				lineFinished = false;
+				line = "";
+				pos = 0;
+				size = 0;
+			}
 		protected:
 			int supply() override {
-				return getchar();
+				if (lineFinished) {
+					return -1;
+				}
+				else {
+					if (pos >= size) {
+						getline(std::cin, line);
+						pos = 0;
+						size = line.size();
+					}
+
+					if (pos < size) {
+						int c = line.at(pos++);
+						return c;
+					}
+					lineFinished = true;
+					return '\n';
+				}
 			}
+			std::string line;
+			int pos = 0;
+			int size = 0;
+			bool lineFinished = false;
 		};
 
 	}

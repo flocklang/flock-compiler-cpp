@@ -75,15 +75,6 @@
     <ClInclude Include="ConsoleCharSupplier.h">
       <Filter>Header Files\Supplier</Filter>
     </ClInclude>
-    <ClInclude Include="Token.h">
-      <Filter>Header Files\Token</Filter>
-    </ClInclude>
-    <ClInclude Include="RawToken.h">
-      <Filter>Header Files\Token</Filter>
-    </ClInclude>
-    <ClInclude Include="LexToken.h">
-      <Filter>Header Files\Token</Filter>
-    </ClInclude>
     <ClInclude Include="AST.h">
       <Filter>Header Files\AST</Filter>
     </ClInclude>
@@ -95,6 +86,9 @@
     </ClInclude>
     <ClInclude Include="FlockGrammar.h">
       <Filter>Header Files\AST</Filter>
+    </ClInclude>
+    <ClInclude Include="ConsoleFormat.h">
+      <Filter>Header Files\Util</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

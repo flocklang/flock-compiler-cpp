@@ -20,41 +20,43 @@
 
 #include <iostream>
 #include <string>
-#include "LexToken.h"
+#include "LocationSupplier.h"
 #include "ConsoleCharSupplier.h"
 #include "FlockGrammar.h"
 
 using namespace std;
 using namespace flock;
-using namespace flock::token;
+using namespace flock::supplier;
 
 
-static void MainLoop() {
+
+static void MainLoop( _sp<grammar::Library> library) {
 	ConsoleCharSupplier consoleSupplier;
 	_sp<LocationSupplier> locationSupplier  = make_shared<LocationSupplier>(LocationSupplier(&consoleSupplier));
-	RawTokenizer *rawTokenizer = new RawTokenizer(&consoleSupplier);
 
-	LexTokenizer lexTokenizer(rawTokenizer);
 	while (true) {
+		consoleSupplier.clear();
+		locationSupplier->clear();
 		fprintf(stderr, "\nready> ");
+		std::pair<string, _sp<grammar::SyntaxNode>> ret = grammar::evaluateAgainstAllRules(locationSupplier, library);
 
-		std::shared_ptr<LexToken> token = lexTokenizer.supply();
-		std::cout << "\n" << *token;
+		string ruleName = get<0>(ret);
 
-		switch (token->getType()) {
-		case LexType::Eof:
-			return;
-		default:
-			break;
+		std::cout << "Rule: " << ruleName;
+
+		_sp<grammar::SyntaxNode> syntaxNode = get<1>(ret);
+		if (syntaxNode) {
+			std::cout << " " << *(syntaxNode->range);
 		}
+		std::cout << "\n";
 	}
 }
 
 int main()
 {
-	const grammar::Library library = grammar::createFlockLibrary();
-	std::cout << "Hello Flock!\n" << library;;
-	MainLoop();
+	 _sp<grammar::Library> library = std::make_shared<grammar::Library>(grammar::createFlockLibrary());
+	std::cout << "Hello Flock!\n" << *library;
+	MainLoop(library);
 }
 
 // Run program: Ctrl + F5 or Debug > Start Without Debugging menu

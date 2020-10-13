@@ -164,16 +164,14 @@
     <ClInclude Include="CachedSupplier.h" />
     <ClInclude Include="ConsoleCharSupplier.h" />
     <ClInclude Include="CompilerFix.h" />
+    <ClInclude Include="ConsoleFormat.h" />
     <ClInclude Include="FileCharSupplier.h" />
     <ClInclude Include="FlockGrammar.h" />
     <ClInclude Include="Grammar.h" />
-    <ClInclude Include="LexToken.h" />
     <ClInclude Include="LocationSupplier.h" />
     <ClInclude Include="Parser.h" />
-    <ClInclude Include="RawToken.h" />
     <ClInclude Include="Source.h" />
     <ClInclude Include="Supplier.h" />
-    <ClInclude Include="Token.h" />
     <ClInclude Include="Util.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

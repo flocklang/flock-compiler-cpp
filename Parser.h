@@ -22,7 +22,6 @@
 #include "CompilerFix.h"
 #include "AST.h"
 #include "CachedSupplier.h"
-#include "LexToken.h"
 
  //===----------------------------------------------------------------------===//
  // Parser Using LLVM Kalediscope Tutorial as Base
@@ -30,53 +29,52 @@
 using namespace std;
 namespace flock {
 	using namespace ast;
-	using namespace token;
 	namespace parser {
 
 		static const int END_OF_EXPRESSION = ';';
 
-		using Tokens = CachedSupplier<LexToken>*;
+		//using Tokens = CachedSupplier<LexToken>*;
 
-		static unique_ptr<BlockExprAST> handleRoot(Tokens tokens) {
+		//static unique_ptr<BlockExprAST> handleRoot(Tokens tokens) {
 
-			_up_vec<ExprAST> expressions;
-			while (true) {
-				_sp<LexToken> currentToken = tokens->pop();
-				if (!currentToken) { // if it is a nullptr, we are done.
-					return make_unique<BlockExprAST>(BlockExprAST(expressions));
-				}
-				switch (currentToken->getType()) {
-				case LexType::Eof:
-					return make_unique<BlockExprAST>(BlockExprAST(expressions));
-					// Eof.
-				case LexType::Identifier: { // ignore top-level semicolons. 
+		//	_up_vec<ExprAST> expressions;
+		//	while (true) {
+		//		_sp<LexToken> currentToken = tokens->pop();
+		//		if (!currentToken) { // if it is a nullptr, we are done.
+		//			return make_unique<BlockExprAST>(BlockExprAST(expressions));
+		//		}
+		//		switch (currentToken->getType()) {
+		//		case LexType::Eof:
+		//			return make_unique<BlockExprAST>(BlockExprAST(expressions));
+		//			// Eof.
+		//		case LexType::Identifier: { // ignore top-level semicolons. 
 
-					string identifier = currentToken->getString();
-					if (identifier == "use") {
-						_up<ExprAST> expression = handleImport(tokens);
-						if (expression) {
-							expressions.push_back(move(expression));
-						}
-					}
-					else if (identifier == "") {
-					}
-					break;
-				}
-										/*case tok_def:
-											HandleDefinition();
-											break;
-										case tok_extern:
-											HandleExtern();
-											break;*/
-				case LexType::Comment:
-				case LexType::Whitespace:
-				case LexType::Unknown:
-				default:
-					HandleTopLevelExpression(); // move up
-					break; // just ignore.
-				}
-			}
-		}
+		//			string identifier = currentToken->getString();
+		//			if (identifier == "use") {
+		//				_up<ExprAST> expression = handleImport(tokens);
+		//				if (expression) {
+		//					expressions.push_back(move(expression));
+		//				}
+		//			}
+		//			else if (identifier == "") {
+		//			}
+		//			break;
+		//		}
+		//								/*case tok_def:
+		//									HandleDefinition();
+		//									break;
+		//								case tok_extern:
+		//									HandleExtern();
+		//									break;*/
+		//		case LexType::Comment:
+		//		case LexType::Whitespace:
+		//		case LexType::Unknown:
+		//		default:
+		//			HandleTopLevelExpression(); // move up
+		//			break; // just ignore.
+		//		}
+		//	}
+		//}
 		/**
 		* deconstructoring is of the form
 		* (a, b) = some_struct
@@ -97,35 +95,35 @@ namespace flock {
 		* This means if we want to explicity support exports 
 		* >> might make sense.
 		*/
-		static unique_ptr<ImportExprAST> handleImport(Tokens tokens) {
-			ignoreWhitespace(tokens);
-			_sp<LexToken> next = tokens->poll();
-			if (next) {
-				vector<string> args;
-				string source;
-				if (next->getType() == LexType::Symbol) {
-					// TOOO: collect arguments
-				}
-				ignoreWhitespace(tokens);
-				while (next && !(next->getType() == LexType::Symbol && next->getChar() == END_OF_EXPRESSION)) {
-					// collect path TODO: either specfify an expression or check its a proper string.
-					source += next->getString();
-					ignoreWhitespace(tokens);
-				}
-				tokens->pop();
-				return make_unique<ImportExprAST>(ImportExprAST(source, args));
-			}
-			return nullptr;
-		}
+		//static unique_ptr<ImportExprAST> handleImport(Tokens tokens) {
+		//	ignoreWhitespace(tokens);
+		//	_sp<LexToken> next = tokens->poll();
+		//	if (next) {
+		//		vector<string> args;
+		//		string source;
+		//		if (next->getType() == LexType::Symbol) {
+		//			// TOOO: collect arguments
+		//		}
+		//		ignoreWhitespace(tokens);
+		//		while (next && !(next->getType() == LexType::Symbol && next->getChar() == END_OF_EXPRESSION)) {
+		//			// collect path TODO: either specfify an expression or check its a proper string.
+		//			source += next->getString();
+		//			ignoreWhitespace(tokens);
+		//		}
+		//		tokens->pop();
+		//		return make_unique<ImportExprAST>(ImportExprAST(source, args));
+		//	}
+		//	return nullptr;
+		//}
 
 
-		static void ignoreWhitespace(Tokens tokens) {
-			_sp<LexToken> next = tokens->poll();
-			while (next && next->getType() == LexType::Whitespace) {
-				tokens->pop();
-				next = tokens->poll();
-			}
-		}
+		//static void ignoreWhitespace(Tokens tokens) {
+		//	_sp<LexToken> next = tokens->poll();
+		//	while (next && next->getType() == LexType::Whitespace) {
+		//		tokens->pop();
+		//		next = tokens->poll();
+		//	}
+		//}
 		//===----------------------------------------------------------------------===//
 // Parser
 //===----------------------------------------------------------------------===//

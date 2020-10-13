@@ -30,6 +30,8 @@ namespace flock {
         class CachedSupplier : public  Supplier<_sp<T>> {
         public:
 
+    
+
             virtual R pollRange(const int amount = 1, const int startIdx = 0) = 0;
 
             _sp<T> poll(const int idx = 0) {
@@ -66,7 +68,7 @@ namespace flock {
 
             R popRange(const int amount = 1) {
                 auto range = pollRange(amount);
-                if (!store.empty()) {
+                if (amount > 0 && !store.empty()) {
                     store.erase(store.begin(), std::min(store.begin() + amount, store.end()));
                 }
                 return range;
@@ -80,15 +82,8 @@ namespace flock {
         public:
             _sp_vec<T> pollRange(const int amount = 1, const int startIdx = 0) override {
                 _sp_vec<T> vecStore;
-                _sp<T> option = this->poll(startIdx);
-                if (!option) {
-                    return vecStore;
-                }
-                vecStore.push_back(option);
-                int nextId = startIdx + 1;
-                int count = amount - 1;
-                while (count-- > 0) {
-                    _sp<T> option = this->poll(nextId++);
+                for (int nextId = startIdx; nextId < startIdx + amount; nextId++) {
+                    _sp<T> option = this->poll(nextId);
                     if (!option) {
                         return vecStore;
                     }

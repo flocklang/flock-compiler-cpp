@@ -30,24 +30,24 @@ namespace flock {
 		static Library createFlockLibrary() {
 			Library library;
 
-			library.rules("newline", new_line());
-			library.rules("whitespace", whitespace());
-			library.rules("digit", digit());
-			library.rules("alpha", alpha());
-			library.rules("alphanum", r_or(grammar("alpha"), grammar("digit")));
+			library.rule("newline", new_line());
+			library.rule("whitespace", whitespace());
+			library.rule("digit", digit());
+			library.rule("alpha", alpha());
+			library.rule("alphanum", r_or(grammar("alpha"), grammar("digit")));
 			library.rule("integer", grammar("digit+"));
 			library.rule("decimal", { grammar("digit+"), equal('.'), grammar("digit+"), r_not({equal('.'), grammar("digit+")}) });
 
 			// identifierEnd ::= alpha | number | '_' | '$'
-			R identifierEnd = r_or({ grammar("alpha+"),grammar("digit+"),equal('_', '$')});
+			R identifierEnd = r_or(grammar("alphanum"), equal({ '_', '$' }));
 			// identifierBegin ::= alpha | ( '_',  identifierEnd)
-			R identifierBegin = grammar("alpha") || (equal('_') >> identifierEnd);
+			R identifierBegin = r_or( grammar("alpha") , seq(equal('_') , identifierEnd));
 			/// identifier ::= identifierBegin, {identifierEnd}
-			library.rule("identifier", identifierBegin >> repeat(identifierEnd));
+			library.rule("identifier", seq(identifierBegin ,repeat(identifierEnd)));
 
-			library.rule("number", grammar("decimal") || grammar("integer"));
-			// probably capture escapes as we go through.
-			library.rule("string", { equal('"') , repeat(r_or(seq(equal('\\'), any()), anybut(equal('"')))), equal('"') });
+			library.rule("number", r_or(grammar("decimal") ,grammar("integer")));
+			// we capture escapes as we go through.
+			library.rule("string", { equal('"') , repeat(r_or(seq(equal('\\'), any()), anybut(r_or(equal('"'),eof())))), equal('"') });
 
 			library.rule("use", seq({ equal("use") , grammar("whitespace*") , option({ equal('('), grammar("whitespace*"), grammar("identifier"), grammar("whitespace*"), equal(')') }) }));
 			return library;

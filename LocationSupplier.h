@@ -62,6 +62,10 @@ namespace flock {
 				}
 				return previous;
 			}
+			void clear() {
+				store.clear();
+				previous = nullptr;
+			}
 
 		protected:
 			_sp<Location> previous = nullptr;
