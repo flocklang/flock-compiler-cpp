@@ -264,7 +264,7 @@ namespace flock {
 				return idx;
 			}
 			std::ostream& textstream(std::ostream& os, const bool bracketed = false, const Bracket bracket = Bracket::NONE) override {
-				return os << colourize(Colour::GREEN, collectName);
+				return child->textstream(os, true);
 			}
 
 		protected:
@@ -639,7 +639,11 @@ namespace flock {
 		protected:
 			int evaluate(Tokens tokens, const int idx, _sp<RuleVisitor> visitor) override {
 				const int newIdx = child->evaluate(tokens, idx, visitor);
-				if (newIdx == FAILURE) {
+				if (newIdx == FAILURE)  {
+					auto loc = tokens->poll(idx);
+					if ((!loc) || loc->character == EOF) {
+						return FAILURE;
+					}
 					return idx + 1;
 				}
 				return FAILURE;

@@ -30,6 +30,7 @@ namespace flock {
 		static Library createFlockLibrary() {
 			Library library;
 
+			library.part("eof", eof());
 			library.part("newline", new_line());
 			library.part("whitespace", whitespace());
 			library.part("digit", digit());
@@ -47,7 +48,7 @@ namespace flock {
 
 			library.rule("number", r_or(grammar("decimal") ,grammar("integer")));
 			// we capture escapes as we go through.
-			library.rule("string", { equal('"') , repeat(r_or(seq(equal('\\'), any()), anybut(r_or(equal('"'),eof())))), equal('"') });
+			library.rule("string", { equal('"') , repeat(r_or(seq(equal('\\'), any()), anybut(equal('"')))), equal('"') });
 
 			library.rule("use", seq({ equal("use") , grammar("whitespace*") , option({ equal('('), grammar("whitespace*"), grammar("identifier"), grammar("whitespace*"), equal(')') }) }));
 			return library;

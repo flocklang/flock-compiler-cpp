@@ -1,4 +1,4 @@
-/*
+﻿/*
  * Copyright 2020 John Orlando Keleshian Moxley All Rights Reserved
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -34,19 +34,20 @@ static void MainLoop( _sp<grammar::Library> library) {
 	ConsoleCharSupplier consoleSupplier;
 	_sp<LocationSupplier> locationSupplier  = make_shared<LocationSupplier>(LocationSupplier(&consoleSupplier));
 
+	std::cout << colourize(Colour::DARK_CYAN, "\nready> ");
 	while (true) {
-		fprintf(stderr, "\nready> ");
 		std::pair<string, _sp<grammar::SyntaxNode>> ret = grammar::evaluateAgainstAllRules(locationSupplier, library);
 
 		string ruleName = get<0>(ret);
-		if (ruleName.empty()) {
+		if (ruleName.empty() || ruleName == "eof") {
 			consoleSupplier.clear();
 			locationSupplier->clear();
+			std::cout << colourize(Colour::DARK_MAGENTA, "\nEOF")<< colourize(Colour::DARK_CYAN, "\nready> ");
 		} else {
 			std::cout << "Rule: " << ruleName;
 
 			_sp<grammar::SyntaxNode> syntaxNode = get<1>(ret);
-			if (syntaxNode) {
+			if (syntaxNode && syntaxNode->getRange()) {
 				std::cout << " " << *(syntaxNode->getRange());
 			}
 			std::cout << "\n";
@@ -57,7 +58,7 @@ static void MainLoop( _sp<grammar::Library> library) {
 int main()
 {
 	 _sp<grammar::Library> library = std::make_shared<grammar::Library>(grammar::createFlockLibrary());
-	std::cout << "Hello Flock!\n" << *library;
+	std::cout << colourize(Colour::YELLOW, "🐦🐦🐦\tHello Flock!\t🐦🐦🐦\n\n") << *library;
 	MainLoop(library);
 }
 
