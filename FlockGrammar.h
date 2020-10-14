@@ -32,9 +32,11 @@ namespace flock {
 
 			library.part("eof", eof());
 			library.part("newline", new_line());
-			library.part("whitespace", whitespace());
+			library.part("blank", blank());
+			library.part("whitespace", r_or(grammar("blank"), grammar("newline")));
 			library.part("digit", digit());
 			library.part("alpha", alpha());
+			library.part("lineEnd", repeat(seq( grammar("blank*"),r_or(grammar("newline"), equal(';')) ),1,0));
 			library.part("alphanum", r_or(grammar("alpha"), grammar("digit")));
 			library.rule("integer", grammar("digit+"));
 			library.rule("decimal", { grammar("digit+"), equal('.'), grammar("digit+"), r_not({equal('.'), grammar("digit+")}) });
@@ -49,8 +51,9 @@ namespace flock {
 			library.rule("number", r_or(grammar("decimal") ,grammar("integer")));
 			// we capture escapes as we go through.
 			library.rule("string", { equal('"') , repeat(r_or(seq(equal('\\'), any()), anybut(equal('"')))), equal('"') });
+			library.rule("comment", { equal('/'), r_or(seq(equal('/'),  collect("contents", until(new_line()))),seq({equal('*'), collect("contents",until(equal("*/"))), equal("*/")}))});
 
-			library.rule("use", seq({ equal("use") , grammar("whitespace*") , option({ equal('('), grammar("whitespace*"), grammar("identifier"), grammar("whitespace*"), equal(')') }) }));
+			library.rule("use", seq({ keyword("use") , grammar("whitespace*") , option({ equal('('), grammar("whitespace*"), grammar("identifier"), grammar("whitespace*"), equal(')') }), grammar("lineEnd")}));
 			return library;
 		};
 		

@@ -242,8 +242,8 @@ namespace flock {
 
 		class CollectingRule : public UnnaryRule {
 		public:
-			CollectingRule(_sp<Rule> child, string collectName) : UnnaryRule(child), collectName(collectName) {}
-			CollectingRule(_sp<Rule> child) : UnnaryRule(child) {}
+			CollectingRule(_sp<Rule> child, string collectName, const bool highlightCollect = true) : UnnaryRule(child), collectName(collectName), highlightCollect(highlightCollect) {}
+
 
 			int evaluate(Tokens tokens, const int idx, _sp<RuleVisitor> visitor) override {
 				_sp<RuleVisitor> newVisitor = visitor->prepareCollectingVisitor(collectName);
@@ -264,11 +264,20 @@ namespace flock {
 				return idx;
 			}
 			std::ostream& textstream(std::ostream& os, const bool bracketed = false, const Bracket bracket = Bracket::NONE) override {
-				return child->textstream(os, true);
+				if (highlightCollect) {
+					os << colourize(Colour::CYAN, "? collect:" + collectName + " ? ( ");
+				}
+				child->textstream(os, true);
+
+				if (highlightCollect) {
+					os << colourize(Colour::CYAN, " )");
+				} 
+				return os;
 			}
 
 		protected:
 			string collectName;
+			bool highlightCollect;
 		};
 
 		class GrammarRule : public Rule {
@@ -446,20 +455,30 @@ namespace flock {
 					else if (min == 1) {
 						// Pass through
 						return  child->textstream(os, bracketed, bracket);
-					}
-					else {
+					} else {
 						os << to_string(min) << " * ";
 						return child->textstream(os);
 					}
 				}
 				else {
 					os << "";
-					if (min > 0) {
+					if (min == 1) {
+						// Pass through
+						child->textstream(os, bracketed, bracket) << ", ";
+					}
+					else if (min > 1) {
 						os << to_string(min) << " * ";
 						child->textstream(os) << ", ";
 					}
-					os << to_string(max) << " * " <<  "[";
-					return child->textstream(os, true) <<  "]";
+
+					if (max == 0) {
+						os << " [";
+						return child->textstream(os, true) << "]";
+					}
+					else {
+						os << to_string(max-min) << " * " << "{";
+						return child->textstream(os, true) << "}";
+					}
 				}
 			}
 		protected:
@@ -681,8 +700,8 @@ namespace flock {
 		static _sp<AnyButRule> anybut(initializer_list<_sp<Rule>> rules) {
 			return anybut(seq(rules));
 		}
-		static _sp<CollectingRule> collect(string type, _sp<Rule> rule) {
-			return make_shared<CollectingRule>(CollectingRule(rule, type));
+		static _sp<CollectingRule> collect(string type, _sp<Rule> rule, bool highlightCollect = true) {
+			return make_shared<CollectingRule>(CollectingRule(rule, type, highlightCollect));
 		}
 
 		static _sp<EqualStringRule> equal(initializer_list<string > values) {
@@ -756,12 +775,20 @@ namespace flock {
 		static _sp<OptionalRule> option(initializer_list<_sp<Rule>> rules) {
 			return option(seq(rules));
 		}
+		static _sp<RepeatRule> until(_sp<Rule> rule) {
+			return repeat(anybut(rule));
+		}
+		static _sp<SequentialRule> until_incl(_sp<Rule> rule) {
+			return seq(repeat(anybut(rule)), rule);
+		}
+		static _sp<CollectingRule> keyword(string keyword) {
+			return collect("keyword", equal(keyword));
+		}
+		static _sp<CollectingRule> keyword(initializer_list<string> keywords) {
+			return collect("keyword", equal(keywords));
+		}
 
 		/// <summary>
-		/// 
-		/// rule(symbol + "+", { grammar(symbol), repeat(grammar(symbol)) });
-		/// rule(symbol + "*", repeat(grammar(symbol)));
-		/// rule(symbol + "?", option(grammar(symbol)));
 		/// </summary>
 		/// <param name="grammer"></param>
 		/// <returns></returns>
@@ -862,7 +889,7 @@ namespace flock {
 		// because declration order is a thing in c++
 
 		_sp <Rule> Library::rule(const string symbol, _sp <Rule> expression) {
-			return part(symbol, collect(symbol, expression));
+			return part(symbol, collect(symbol, expression, false));
 		}
 		_sp <Rule> Library::rule(const string symbol, initializer_list<_sp<Rule>> expressions) {
 			return rule(symbol, seq(expressions));
