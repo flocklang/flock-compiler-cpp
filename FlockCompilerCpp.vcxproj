@@ -159,6 +159,7 @@
     <None Include="LICENSE" />
     <None Include="packages.config" />
     <None Include="README.md" />
+    <None Include="Text.ebnf" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AST.h" />
@@ -168,12 +169,17 @@
     <ClInclude Include="ConsoleFormat.h" />
     <ClInclude Include="FileCharSupplier.h" />
     <ClInclude Include="FlockGrammar.h" />
-    <ClInclude Include="Grammar.h" />
+    <ClInclude Include="RuleFunctions.h" />
+    <ClInclude Include="resource.h" />
+    <ClInclude Include="RuleTypes.h" />
     <ClInclude Include="LocationSupplier.h" />
     <ClInclude Include="Parser.h" />
     <ClInclude Include="Source.h" />
     <ClInclude Include="Supplier.h" />
     <ClInclude Include="Util.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="FlockCompilerCpp.rc" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

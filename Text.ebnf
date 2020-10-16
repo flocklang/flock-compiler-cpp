@@ -1,0 +1,11 @@
+twelve                          = "1",
+"2" ;
+two hundred one                 = '2', 
+"0", 
+"1" ;
+three hundred twelve            = {("3", (((twelve))))} ;
+twelve thousand two hundred one = twelve, (* some commment*) ? hi ?
+   two hundred one 
+   | twelve ||
+   two hundred one;
+invalid = (*), (|);

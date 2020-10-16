@@ -75,5 +75,28 @@ namespace flock {
 	template <typename T>
 	using _up_vec = vector<_up<T>>;
 
+	template<typename BaseType>
+	static void into(std::vector<BaseType>& collection) {/* do nothing, but we may have empty variadics.*/};
+
+	template<typename BaseType, typename LastRule = _sp<BaseType>>
+	static void into(_sp_vec<BaseType>& collection, LastRule last)
+	{
+		collection.push_back(last);
+	};
+
+	template<typename BaseType, typename FirstRule = _sp<BaseType>, typename ...OtherRules>
+	static void into(_sp_vec<BaseType>& collection, FirstRule const& first, OtherRules... others)
+	{
+		collection.push_back(first);
+		into(collection, others...);
+	};
+	template <typename BaseType, typename... Types>
+	static _sp_vec<BaseType> from(_sp<Types>... values) {
+		_sp_vec<BaseType> collection;
+		into(collection, values...);
+		return collection;
+	}
+
+
 }
 #endif

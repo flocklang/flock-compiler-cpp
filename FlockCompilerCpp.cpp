@@ -27,16 +27,17 @@
 using namespace std;
 using namespace flock;
 using namespace flock::supplier;
+using namespace flock::ebnf;
 
 
 
-static void MainLoop( _sp<grammar::Library> library) {
+static void MainLoop( _sp<types::Library> library) {
 	ConsoleCharSupplier consoleSupplier;
 	_sp<LocationSupplier> locationSupplier  = make_shared<LocationSupplier>(LocationSupplier(&consoleSupplier));
 
 	std::cout << colourize(Colour::DARK_CYAN, "\nready> ");
 	while (true) {
-		std::pair<string, _sp<grammar::SyntaxNode>> ret = grammar::evaluateAgainstAllRules(locationSupplier, library);
+		std::pair<string, _sp<types::SyntaxNode>> ret = types::evaluateAgainstAllRules(locationSupplier, library);
 
 		string ruleName = get<0>(ret);
 		if (ruleName.empty() || ruleName == "eof") {
@@ -46,7 +47,7 @@ static void MainLoop( _sp<grammar::Library> library) {
 		} else {
 			std::cout << "Rule: " << ruleName;
 
-			_sp<grammar::SyntaxNode> syntaxNode = get<1>(ret);
+			_sp<types::SyntaxNode> syntaxNode = get<1>(ret);
 			if (syntaxNode && syntaxNode->getRange()) {
 				std::cout << " " << *(syntaxNode->getRange());
 			}
@@ -57,7 +58,7 @@ static void MainLoop( _sp<grammar::Library> library) {
 
 int main()
 {
-	 _sp<grammar::Library> library = std::make_shared<grammar::Library>(grammar::createFlockLibrary());
+	 _sp<types::Library> library = std::make_shared<types::Library>(grammar::createFlockLibrary());
 	std::cout << colourize(Colour::YELLOW, "==== Hello Flock ====\n\n") << *library;
 	MainLoop(library);
 }

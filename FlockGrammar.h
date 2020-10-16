@@ -15,7 +15,7 @@
  */
 #ifndef FLOCK_COMPILER_FLOCK_GRAMMAR_H
 #define FLOCK_COMPILER_FLOCK_GRAMMAR_H
-#include "Grammar.h"
+#include "RuleFunctions.h"
 #include "Util.h"
 
 
@@ -25,35 +25,36 @@
 using namespace std;
 namespace flock {
 	using namespace source;
+	using namespace ebnf;
 	namespace grammar {
-		using R = _sp<Rule>;
-		static Library createFlockLibrary() {
-			Library library;
+		using R = _sp<types::Rule>;
+		static types::Library createFlockLibrary() {
+			types::Library library;
 
-			library.part("eof", eof());
-			library.part("newline", new_line());
-			library.part("blank", blank());
-			library.part("whitespace", r_or(grammar("blank"), grammar("newline")));
-			library.part("digit", digit());
-			library.part("alpha", alpha());
-			library.part("lineEnd", repeat(seq( grammar("blank*"),r_or(grammar("newline"), equal(';')) ),1,0));
-			library.part("alphanum", r_or(grammar("alpha"), grammar("digit")));
-			library.rule("integer", grammar("digit+"));
-			library.rule("decimal", { grammar("digit+"), equal('.'), grammar("digit+"), r_not({equal('.'), grammar("digit+")}) });
+			library.part("eof", rule::eof());
+			library.part("newline", rule::new_line());
+			library.part("blank", rule::blank());
+			library.part("whitespace", rule::OR(rule::grammar("blank"), rule::grammar("newline")));
+			library.part("digit", rule::digit());
+			library.part("alpha", rule::alpha());
+			library.part("lineEnd", rule::repeat(rule::seq(rule::grammar("blank*"), rule::OR(rule::grammar("newline"), rule::equal(';')) ),1,0));
+			library.part("alphanum", rule::OR(rule::grammar("alpha"), rule::grammar("digit")));
+			library.rule("integer", rule::grammar("digit+"));
+			library.rule("decimal", { rule::grammar("digit+"), rule::equal('.'), rule::grammar("digit+"), rule::NOT({rule::equal('.'), rule::grammar("digit+")}) });
 
 			// identifierEnd ::= alpha | number | '_' | '$'
-			R identifierEnd = r_or(grammar("alphanum"), equal({ '_', '$' }));
+			R identifierEnd = rule::OR(rule::grammar("alphanum"), rule::equal({ '_', '$' }));
 			// identifierBegin ::= alpha | ( '_',  identifierEnd)
-			R identifierBegin = r_or( grammar("alpha") , seq(equal('_') , identifierEnd));
+			R identifierBegin = rule::OR( rule::grammar("alpha") , rule::seq(rule::equal('_') , identifierEnd));
 			/// identifier ::= identifierBegin, {identifierEnd}
-			library.rule("identifier", seq(identifierBegin ,repeat(identifierEnd)));
+			library.rule("identifier", rule::seq(identifierBegin , rule::repeat(identifierEnd)));
 
-			library.rule("number", r_or(grammar("decimal") ,grammar("integer")));
+			library.rule("number", rule::OR(rule::grammar("decimal") ,rule::grammar("integer")));
 			// we capture escapes as we go through.
-			library.rule("string", { equal('"') , repeat(r_or(seq(equal('\\'), any()), anybut(equal('"')))), equal('"') });
-			library.rule("comment", { equal('/'), r_or(seq(equal('/'),  collect("contents", until(new_line()))),seq({equal('*'), collect("contents",until(equal("*/"))), equal("*/")}))});
+			library.rule("string", { rule::equal('"') , rule::repeat(rule::OR(rule::seq(rule::equal('\\'), rule::any()), rule::anybut(rule::equal('"')))), rule::equal('"') });
+			library.rule("comment", { rule::equal('/'), rule::OR(rule::seq(rule::equal('/'),  rule::symbol("contents", rule::until(rule::new_line()))),rule::seq(rule::equal('*'), rule::symbol("contents",rule::until(rule::equal("*/"))), rule::equal("*/")))});
 
-			library.rule("use", seq({ keyword("use") , grammar("whitespace*") , option({ equal('('), grammar("whitespace*"), grammar("identifier"), grammar("whitespace*"), equal(')') }), grammar("lineEnd")}));
+			library.rule("use", rule::seq({ rule::keyword("use") , rule::grammar("whitespace*") , rule::option({ rule::equal('('), rule::grammar("whitespace*"), rule::grammar("identifier"), rule::grammar("whitespace*"), rule::equal(')') }), rule::grammar("lineEnd")}));
 			return library;
 		};
 		

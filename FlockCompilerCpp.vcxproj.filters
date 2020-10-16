@@ -28,6 +28,12 @@
     <Filter Include="Header Files\AST">
       <UniqueIdentifier>{b1b781ea-ce82-439f-833c-4cf550a88706}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Header Files\EBNF">
+      <UniqueIdentifier>{b9a1e4cc-1057-463f-8d7d-62fe31988a89}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="grammers">
+      <UniqueIdentifier>{894a31a7-e4f2-434e-b0db-e9f7f1befd58}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="FlockCompilerCpp.cpp">
@@ -49,6 +55,9 @@
       <Filter>Resource Files</Filter>
     </None>
     <None Include="FlockCompilerCpp.licenseheader" />
+    <None Include="Text.ebnf">
+      <Filter>grammers</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Supplier.h">
@@ -81,14 +90,25 @@
     <ClInclude Include="Parser.h">
       <Filter>Header Files\AST</Filter>
     </ClInclude>
-    <ClInclude Include="Grammar.h">
-      <Filter>Header Files\AST</Filter>
-    </ClInclude>
     <ClInclude Include="FlockGrammar.h">
       <Filter>Header Files\AST</Filter>
     </ClInclude>
     <ClInclude Include="ConsoleFormat.h">
       <Filter>Header Files\Util</Filter>
     </ClInclude>
+    <ClInclude Include="RuleTypes.h">
+      <Filter>Header Files\EBNF</Filter>
+    </ClInclude>
+    <ClInclude Include="resource.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="RuleFunctions.h">
+      <Filter>Header Files\EBNF</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="FlockCompilerCpp.rc">
+      <Filter>Resource Files</Filter>
+    </ResourceCompile>
   </ItemGroup>
 </Project>
