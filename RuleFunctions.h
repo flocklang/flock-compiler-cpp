@@ -32,19 +32,19 @@ namespace flock {
 		namespace rule {
 			using namespace flock::ebnf::types;
 
-			static _sp<SequentialRule> seq(initializer_list<_sp<Rule>> rules);
-			static _sp<AnyRule> any();
-			static _sp<AnyButRule> anybut(_sp<Rule> rule);
-			static _sp<AnyButRule> anybut(initializer_list<_sp<Rule>> rules);
-			static _sp<SymbolRule> symbol(string type, _sp<Rule> rule, bool highlightCollect = true);
-			static _sp<EqualStringRule> equal(initializer_list<string > values);
-			static _sp<EqualStringRule> equal(string value);
-			static _sp<EqualCharRule> equal(initializer_list<int> values);
-			static _sp<EqualCharRule> equal(vector<int> values);
-			static _sp<EqualCharRule> equal(int value);
+			static _sp<SequentialRule> SEQ(initializer_list<_sp<Rule>> rules);
+			static _sp<AnyRule> ANY();
+			static _sp<AnyButRule> ANYBUT(_sp<Rule> rule);
+			static _sp<AnyButRule> ANYBUT(initializer_list<_sp<Rule>> rules);
+			static _sp<SymbolRule> SYM(string type, _sp<Rule> rule, bool highlightCollect = true);
+			static _sp<EqualStringRule> EQ(initializer_list<string > values);
+			static _sp<EqualStringRule> EQ(string value);
+			static _sp<EqualCharRule> EQ(initializer_list<int> values);
+			static _sp<EqualCharRule> EQ(vector<int> values);
+			static _sp<EqualCharRule> EQ(int value);
 			static _sp<EqualCharRule> equalRange(int start, int end);
 			static _sp<EOFRule> eof();
-			static _sp<RepeatRule> repeat(_sp<Rule> rule, const int min = 0, const int max = 0);
+			static _sp<RepeatRule> REP(_sp<Rule> rule, const int min = 0, const int max = 0);
 			static _sp<NotRule> NOT(_sp<Rule> rule);
 			static _sp<NotRule> NOT(initializer_list<_sp<Rule>> rules);
 			static _sp<OrRule> OR(initializer_list<_sp<Rule>> rules);
@@ -55,15 +55,15 @@ namespace flock {
 			static _sp<AndRule> AND(_sp<Rule> left, _sp<Rule> middle, _sp<Rule> right);
 			static _sp<XorRule> XOR(initializer_list<_sp<Rule>> rules);
 			static _sp<XorRule> XOR(_sp<Rule> left, _sp<Rule> right);
-			static _sp<SequentialRule> seq(_sp<Rule> left, _sp<Rule> right);
-			static _sp<SequentialRule> seq(_sp<Rule> left, _sp<Rule> middle, _sp<Rule> right);
-			static _sp<OptionalRule> option(_sp<Rule> rule);
-			static _sp<OptionalRule> option(initializer_list<_sp<Rule>> rules);
-			static _sp<RepeatRule> until(_sp<Rule> rule);
-			static _sp<SequentialRule> until_incl(_sp<Rule> rule);
+			static _sp<SequentialRule> SEQ(_sp<Rule> left, _sp<Rule> right);
+			static _sp<SequentialRule> SEQ(_sp<Rule> left, _sp<Rule> middle, _sp<Rule> right);
+			static _sp<OptionalRule> OPT(_sp<Rule> rule);
+			static _sp<OptionalRule> OPT(initializer_list<_sp<Rule>> rules);
+			static _sp<RepeatRule> UNTIL(_sp<Rule> rule);
+			static _sp<SequentialRule> UNTIL_INC(_sp<Rule> rule);
 			static _sp<SymbolRule> keyword(string keyword);
 			static _sp<SymbolRule> keyword(initializer_list<string> keywords);
-			static _sp<Rule> grammar(string grammerName);
+			static _sp<Rule> RULE(string grammerName);
 			static _sp<EqualCharRule> new_line();
 			static _sp<EqualCharRule> blank();
 			static _sp<OrRule> whitespace();
@@ -73,41 +73,41 @@ namespace flock {
 			static _sp<EqualCharRule> digit();
 
 
-			static _sp<SequentialRule> seq(initializer_list<_sp<Rule>> rules) {
+			static _sp<SequentialRule> SEQ(initializer_list<_sp<Rule>> rules) {
 				return make_shared<SequentialRule>(rules);
 			}
-			static _sp<AnyRule> any() {
+			static _sp<AnyRule> ANY() {
 				return make_shared<AnyRule>();
 			}
-			static _sp<AnyButRule> anybut(_sp<Rule> rule) {
+			static _sp<AnyButRule> ANYBUT(_sp<Rule> rule) {
 				return make_shared<AnyButRule>(rule);
 			}
-			static _sp<AnyButRule> anybut(initializer_list<_sp<Rule>> rules) {
-				return anybut(seq(rules));
+			static _sp<AnyButRule> ANYBUT(initializer_list<_sp<Rule>> rules) {
+				return ANYBUT(SEQ(rules));
 			}
-			static _sp<SymbolRule> symbol(string type, _sp<Rule> rule, bool highlightCollect) {
+			static _sp<SymbolRule> SYM(string type, _sp<Rule> rule, bool highlightCollect) {
 				return make_shared<SymbolRule>(rule, type, highlightCollect);
 			}
 
-			static _sp<EqualStringRule> equal(initializer_list<string > values) {
+			static _sp<EqualStringRule> EQ(initializer_list<string > values) {
 				return make_shared<EqualStringRule>(values);
 			}
-			static _sp<EqualStringRule> equal(string value) {
-				return equal({ value });
+			static _sp<EqualStringRule> EQ(string value) {
+				return EQ({ value });
 			}
-			static _sp<EqualCharRule> equal(vector<int> values) {
+			static _sp<EqualCharRule> EQ(vector<int> values) {
 				return make_shared<EqualCharRule>(values);
 			}
-			static _sp<EqualCharRule> equal(initializer_list<int> values) {
+			static _sp<EqualCharRule> EQ(initializer_list<int> values) {
 				return make_shared<EqualCharRule>(values);
 			}
-			static _sp<EqualCharRule> equal(int value) {
-				return equal({ value });
+			static _sp<EqualCharRule> EQ(int value) {
+				return EQ({ value });
 			}
 			static _sp<EqualCharRule> equalRange(int start, int end) {
 				vector<int> list((end - start) + 1);
 				iota(std::begin(list), std::end(list), start);
-				return equal(list);
+				return EQ(list);
 			}
 			static _sp<EOFRule> eof() {
 				return make_shared<EOFRule>();
@@ -118,9 +118,9 @@ namespace flock {
 				return make_shared<NotRule>(rule);
 			}
 			static _sp<NotRule> NOT(initializer_list<_sp<Rule>> rules) {
-				return make_shared<NotRule>(seq(rules));
+				return make_shared<NotRule>(SEQ(rules));
 			}
-			static _sp<RepeatRule> repeat(_sp<Rule> rule, int min, int max) {
+			static _sp<RepeatRule> REP(_sp<Rule> rule, int min, int max) {
 				return make_shared<RepeatRule>(rule, min, max);
 			}
 			static _sp<OrRule> OR(initializer_list<_sp<Rule>> rules) {
@@ -147,58 +147,58 @@ namespace flock {
 			static _sp<XorRule> XOR(_sp<Rule> left, _sp<Rule> right) {
 				return XOR({ left, right });
 			}
-			static _sp<SequentialRule> seq(_sp<Rule> left, _sp<Rule> right) {
-				return seq({ left, right });
+			static _sp<SequentialRule> SEQ(_sp<Rule> left, _sp<Rule> right) {
+				return SEQ({ left, right });
 			}
-			static _sp<SequentialRule> seq(_sp<Rule> left, _sp<Rule> middle, _sp<Rule> right) {
-				return seq({ left, middle, right });
+			static _sp<SequentialRule> SEQ(_sp<Rule> left, _sp<Rule> middle, _sp<Rule> right) {
+				return SEQ({ left, middle, right });
 			}
 
-			static _sp<OptionalRule> option(_sp<Rule> rule) {
+			static _sp<OptionalRule> OPT(_sp<Rule> rule) {
 				return make_shared<OptionalRule>(rule);
 			}
-			static _sp<OptionalRule> option(initializer_list<_sp<Rule>> rules) {
-				return option(seq(rules));
+			static _sp<OptionalRule> OPT(initializer_list<_sp<Rule>> rules) {
+				return OPT(SEQ(rules));
 			}
-			static _sp<RepeatRule> until(_sp<Rule> rule) {
-				return repeat(anybut(rule));
+			static _sp<RepeatRule> UNTIL(_sp<Rule> rule) {
+				return REP(ANYBUT(rule));
 			}
-			static _sp<SequentialRule> until_incl(_sp<Rule> rule) {
-				return seq(repeat(anybut(rule)), rule);
+			static _sp<SequentialRule> UNTIL_INC(_sp<Rule> rule) {
+				return SEQ(REP(ANYBUT(rule)), rule);
 			}
 			static _sp<SymbolRule> keyword(string keyword) {
-				return symbol("keyword", equal(keyword));
+				return SYM("keyword", EQ(keyword));
 			}
 			static _sp<SymbolRule> keyword(initializer_list<string> keywords) {
-				return symbol("keyword", equal(keywords));
+				return SYM("keyword", EQ(keywords));
 			}
 
 			/// <summary>
 			/// </summary>
 			/// <param name="grammer"></param>
 			/// <returns></returns>
-			static _sp<Rule> grammar(string grammerName) {
+			static _sp<Rule> RULE(string grammerName) {
 				switch (grammerName.back()) {
 				case '*': {
 					string name = grammerName.substr(0, grammerName.length() - 1);
 					_sp<GrammarRule> grammarRule = make_shared<GrammarRule>(name);
-					return repeat(grammarRule);
+					return REP(grammarRule);
 				}
 				case '+': {
 					string name = grammerName.substr(0, grammerName.length() - 1);
 					_sp<GrammarRule> grammarRule = make_shared<GrammarRule>(name);
-					return seq(grammarRule, repeat(grammarRule));
+					return SEQ(grammarRule, REP(grammarRule));
 				}
 				case '?': {
 					string name = grammerName.substr(0, grammerName.length() - 1);
 					_sp<GrammarRule> grammarRule = make_shared<GrammarRule>(name);
-					return option(grammarRule);
+					return OPT(grammarRule);
 
 				}
 				case '-': {
 					string name = grammerName.substr(0, grammerName.length() - 1);
 					_sp<GrammarRule> grammarRule = make_shared<GrammarRule>(name);
-					return anybut(grammarRule);
+					return ANYBUT(grammarRule);
 				}
 
 				default: {
@@ -208,10 +208,10 @@ namespace flock {
 				}
 			}
 			static _sp<EqualCharRule> new_line() {
-				return  equal({ '\n', '\r' });
+				return  EQ({ '\n', '\r' });
 			}
 			static _sp<EqualCharRule> blank() {
-				return  equal({ ' ', '\t', '\v', '\f' });
+				return  EQ({ ' ', '\t', '\v', '\f' });
 			}
 			static _sp<OrRule> whitespace() {
 				return  OR(blank(), new_line());

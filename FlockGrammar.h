@@ -34,27 +34,28 @@ namespace flock {
 			library.part("eof", rule::eof());
 			library.part("newline", rule::new_line());
 			library.part("blank", rule::blank());
-			library.part("whitespace", rule::OR(rule::grammar("blank"), rule::grammar("newline")));
+			library.part("whitespace", rule::OR(rule::RULE("blank"), rule::RULE("newline")));
 			library.part("digit", rule::digit());
 			library.part("alpha", rule::alpha());
-			library.part("lineEnd", rule::repeat(rule::seq(rule::grammar("blank*"), rule::OR(rule::grammar("newline"), rule::equal(';')) ),1,0));
-			library.part("alphanum", rule::OR(rule::grammar("alpha"), rule::grammar("digit")));
-			library.rule("integer", rule::grammar("digit+"));
-			library.rule("decimal", { rule::grammar("digit+"), rule::equal('.'), rule::grammar("digit+"), rule::NOT({rule::equal('.'), rule::grammar("digit+")}) });
+			library.part("lineEnd", rule::REP(rule::SEQ(rule::RULE("blank*"), rule::OR(rule::RULE("newline"), rule::EQ(';')) ),1,0));
+			library.part("alphanum", rule::OR(rule::RULE("alpha"), rule::RULE("digit")));
+			library.rule("integer", rule::RULE("digit+"));
+			library.rule("decimal", { rule::RULE("digit+"), rule::EQ('.'), rule::RULE("digit+"), rule::NOT({rule::EQ('.'), rule::RULE("digit+")}) });
 
 			// identifierEnd ::= alpha | number | '_' | '$'
-			R identifierEnd = rule::OR(rule::grammar("alphanum"), rule::equal({ '_', '$' }));
+			R identifierEnd = rule::OR(rule::RULE("alphanum"), rule::EQ({ '_', '$' }));
 			// identifierBegin ::= alpha | ( '_',  identifierEnd)
-			R identifierBegin = rule::OR( rule::grammar("alpha") , rule::seq(rule::equal('_') , identifierEnd));
+			R identifierBegin = rule::OR( rule::RULE("alpha") , rule::SEQ(rule::EQ('_') , identifierEnd));
 			/// identifier ::= identifierBegin, {identifierEnd}
-			library.rule("identifier", rule::seq(identifierBegin , rule::repeat(identifierEnd)));
+			library.rule("identifier", rule::SEQ(identifierBegin , rule::REP(identifierEnd)));
 
-			library.rule("number", rule::OR(rule::grammar("decimal") ,rule::grammar("integer")));
+			library.rule("number", rule::OR(rule::RULE("decimal") ,rule::RULE("integer")));
 			// we capture escapes as we go through.
-			library.rule("string", { rule::equal('"') , rule::repeat(rule::OR(rule::seq(rule::equal('\\'), rule::any()), rule::anybut(rule::equal('"')))), rule::equal('"') });
-			library.rule("comment", { rule::equal('/'), rule::OR(rule::seq(rule::equal('/'),  rule::symbol("contents", rule::until(rule::new_line()))),rule::seq(rule::equal('*'), rule::symbol("contents",rule::until(rule::equal("*/"))), rule::equal("*/")))});
+			library.rule("string", { rule::EQ('"') , rule::REP(rule::OR(rule::SEQ(rule::EQ('\\'), rule::ANY()), rule::ANYBUT(rule::EQ('"')))), rule::EQ('"') });
+			library.rule("comment", { rule::EQ('/'), rule::OR(rule::SEQ(rule::EQ('/'),  rule::SYM("contents", rule::UNTIL(rule::new_line()))),rule::SEQ(rule::EQ('*'), rule::SYM("contents",rule::UNTIL(rule::EQ("*/"))), rule::EQ("*/")))});
+			library.rule("identifierList", rule::OR({ rule::RULE("identifier"), rule::SEQ({ rule::EQ('('), rule::RULE("whitespace*"), rule::RULE("identifierList"), rule::REP(rule::SEQ({rule::RULE("whitespace*"),rule::EQ(','),rule::RULE("whitespace*"), rule::RULE("identifierList"),rule::RULE("whitespace*")})), rule::RULE("whitespace*"),rule::EQ(')')}) }));
 
-			library.rule("use", rule::seq({ rule::keyword("use") , rule::grammar("whitespace*") , rule::option({ rule::equal('('), rule::grammar("whitespace*"), rule::grammar("identifier"), rule::grammar("whitespace*"), rule::equal(')') }), rule::grammar("lineEnd")}));
+			library.rule("use", rule::SEQ({ rule::keyword("use") , rule::RULE("whitespace*") , rule::OPT(rule::RULE("identifierList")), rule::RULE("lineEnd")}));
 			return library;
 		};
 		

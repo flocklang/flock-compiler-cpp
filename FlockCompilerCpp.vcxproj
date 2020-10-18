@@ -171,6 +171,7 @@
     <ClInclude Include="FlockGrammar.h" />
     <ClInclude Include="RuleFunctions.h" />
     <ClInclude Include="resource.h" />
+    <ClInclude Include="Rules.h" />
     <ClInclude Include="RuleTypes.h" />
     <ClInclude Include="LocationSupplier.h" />
     <ClInclude Include="Parser.h" />

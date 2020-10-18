@@ -34,6 +34,9 @@
     <Filter Include="grammers">
       <UniqueIdentifier>{894a31a7-e4f2-434e-b0db-e9f7f1befd58}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Header Files\Visitor">
+      <UniqueIdentifier>{c3195ab7-72d5-4132-a654-4cd351185728}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="FlockCompilerCpp.cpp">
@@ -103,6 +106,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="RuleFunctions.h">
+      <Filter>Header Files\EBNF</Filter>
+    </ClInclude>
+    <ClInclude Include="Rules.h">
       <Filter>Header Files\EBNF</Filter>
     </ClInclude>
   </ItemGroup>

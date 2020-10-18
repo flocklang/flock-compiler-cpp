@@ -20,11 +20,11 @@
 namespace flock {
     namespace supplier {
 
-        template<typename T>
+        template<typename Contents>
         class Supplier
         {
         public:
-            virtual T supply() = 0;
+            virtual Contents supply() = 0;
         };
     }
 }

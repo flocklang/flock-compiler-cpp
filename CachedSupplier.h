@@ -26,15 +26,15 @@
 namespace flock {
     namespace supplier {
 
-        template<typename T, typename R = _sp_vec<T>>
-        class CachedSupplier : public  Supplier<_sp<T>> {
+        template<typename Contents, typename R = _sp_vec<Contents>>
+        class CachedSupplier : public  Supplier<_sp<Contents>> {
         public:
 
     
 
             virtual R pollRange(const int amount = 1, const int startIdx = 0) = 0;
 
-            _sp<T> poll(const int idx = 0) {
+            _sp<Contents> poll(const int idx = 0) {
                 for (int i = store.size(); i <= idx; i++) {
                     auto value = this->supply();
                     if (!value) {
@@ -50,7 +50,7 @@ namespace flock {
                 return store.at(idx);
             };
 
-            _sp<T> pop() {
+            _sp<Contents> pop() {
                 if (store.empty()) {
                     auto value = this->supply();
                     if (!value) {
@@ -74,16 +74,16 @@ namespace flock {
                 return range;
             };
         protected:
-            std::deque<_sp<T>> store;
+            std::deque<_sp<Contents>> store;
         };
 
-        template<typename T>
-        class CachedVectorSupplier : public CachedSupplier<T> {
+        template<typename Contents>
+        class CachedVectorSupplier : public CachedSupplier<Contents> {
         public:
-            _sp_vec<T> pollRange(const int amount = 1, const int startIdx = 0) override {
-                _sp_vec<T> vecStore;
+            _sp_vec<Contents> pollRange(const int amount = 1, const int startIdx = 0) override {
+                _sp_vec<Contents> vecStore;
                 for (int nextId = startIdx; nextId < startIdx + amount; nextId++) {
-                    _sp<T> option = this->poll(nextId);
+                    _sp<Contents> option = this->poll(nextId);
                     if (!option) {
                         return vecStore;
                     }

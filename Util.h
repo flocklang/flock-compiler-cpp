@@ -31,9 +31,9 @@ namespace flock {
 	static bool isEqual(const string from, string to) {
 		return from.compare(to) == 0;
 	}
-	template<typename T>
-	static bool any_of(const T value, initializer_list<T> list) {
-		for (T elem : list)
+	template<typename Contents>
+	static bool any_of(const Contents value, initializer_list<Contents> list) {
+		for (Contents elem : list)
 		{
 			if (value == elem) {
 				return true;
@@ -52,28 +52,28 @@ namespace flock {
 		return false;
 	}
 
-	template<typename T>
-	static bool none_of(const T value, initializer_list<T> list) {
-		return !any_of<T>(value, list);
+	template<typename Contents>
+	static bool none_of(const Contents value, initializer_list<Contents> list) {
+		return !any_of<Contents>(value, list);
 	}
 
-	template<typename T>
-	static bool none_of(const T value, string list) {
-		return !any_of<T>(value, list);
+	template<typename Contents>
+	static bool none_of(const Contents value, string list) {
+		return !any_of<Contents>(value, list);
 	}
 
 	// Short hand to help readability, (yes really, and on typing)
-	template <typename T>
-	using _sp = shared_ptr<T>;
+	template <typename Contents>
+	using _sp = shared_ptr<Contents>;
 
-	template <typename T>
-	using _sp_vec = vector<_sp<T>>;
+	template <typename Contents>
+	using _sp_vec = vector<_sp<Contents>>;
 
-	template <typename T>
-	using _up = unique_ptr<T>;
+	template <typename Contents>
+	using _up = unique_ptr<Contents>;
 
-	template <typename T>
-	using _up_vec = vector<_up<T>>;
+	template <typename Contents>
+	using _up_vec = vector<_up<Contents>>;
 
 	template<typename BaseType>
 	static void into(std::vector<BaseType>& collection) {/* do nothing, but we may have empty variadics.*/};
