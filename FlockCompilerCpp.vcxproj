@@ -171,6 +171,7 @@
     <ClInclude Include="FileCharSupplier.h" />
     <ClInclude Include="FlockGrammar.h" />
     <ClInclude Include="IDCounter.h" />
+    <ClInclude Include="LogicRules.h" />
     <ClInclude Include="RuleFunctions.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="Rules.h" />

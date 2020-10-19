@@ -37,6 +37,9 @@
     <Filter Include="Header Files\Visitor">
       <UniqueIdentifier>{c3195ab7-72d5-4132-a654-4cd351185728}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Header Files\Rules">
+      <UniqueIdentifier>{c5130bae-e72d-4218-a881-bce8dd1c35e6}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="FlockCompilerCpp.cpp">
@@ -111,11 +114,14 @@
     <ClInclude Include="RuleFunctions.h">
       <Filter>Header Files\EBNF</Filter>
     </ClInclude>
-    <ClInclude Include="Rules.h">
-      <Filter>Header Files\EBNF</Filter>
-    </ClInclude>
     <ClInclude Include="IDCounter.h">
       <Filter>Header Files\Util</Filter>
+    </ClInclude>
+    <ClInclude Include="Rules.h">
+      <Filter>Header Files\Rules</Filter>
+    </ClInclude>
+    <ClInclude Include="LogicRules.h">
+      <Filter>Header Files\Rules</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
