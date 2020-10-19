@@ -42,6 +42,9 @@
     <ClCompile Include="FlockCompilerCpp.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Rules.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
@@ -110,6 +113,9 @@
     </ClInclude>
     <ClInclude Include="Rules.h">
       <Filter>Header Files\EBNF</Filter>
+    </ClInclude>
+    <ClInclude Include="IDCounter.h">
+      <Filter>Header Files\Util</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

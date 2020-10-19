@@ -53,9 +53,32 @@ namespace flock {
 			// we capture escapes as we go through.
 			library.rule("string", { rule::EQ('"') , rule::REP(rule::OR(rule::SEQ(rule::EQ('\\'), rule::ANY()), rule::ANYBUT(rule::EQ('"')))), rule::EQ('"') });
 			library.rule("comment", { rule::EQ('/'), rule::OR(rule::SEQ(rule::EQ('/'),  rule::SYM("contents", rule::UNTIL(rule::new_line()))),rule::SEQ(rule::EQ('*'), rule::SYM("contents",rule::UNTIL(rule::EQ("*/"))), rule::EQ("*/")))});
-			library.rule("identifierList", rule::OR({ rule::RULE("identifier"), rule::SEQ({ rule::EQ('('), rule::RULE("whitespace*"), rule::RULE("identifierList"), rule::REP(rule::SEQ({rule::RULE("whitespace*"),rule::EQ(','),rule::RULE("whitespace*"), rule::RULE("identifierList"),rule::RULE("whitespace*")})), rule::RULE("whitespace*"),rule::EQ(')')}) }));
+			library.rule("alias", { rule::RULE("identifier"),
+				rule::OPT({
+					rule::RULE("whitespace*"),
+					rule::EQ('='),
+					rule::RULE("whitespace*"),
+					rule::RULE("identifier") })
+				});
 
-			library.rule("use", rule::SEQ({ rule::keyword("use") , rule::RULE("whitespace*") , rule::OPT(rule::RULE("identifierList")), rule::RULE("lineEnd")}));
+			library.rule("aliasList", rule::OR({ rule::SEQ({rule::RULE("alias"), rule::REP(rule::SEQ({rule::RULE("whitespace*"),
+						rule::EQ(','),
+						rule::RULE("whitespace*"),
+						rule::RULE("aliasList"),
+						rule::RULE("whitespace*")}))}),
+				rule::SEQ({ rule::EQ('('), 
+					rule::RULE("whitespace*"), 
+					rule::RULE("aliasList"), 
+					rule::REP(rule::SEQ({rule::RULE("whitespace*"),
+						rule::EQ(','),
+						rule::RULE("whitespace*"), 
+						rule::RULE("aliasList"),
+						rule::RULE("whitespace*")})), 
+					rule::RULE("whitespace*"),
+					rule::EQ(')')
+					}) 
+				}));
+			library.rule("use", rule::SEQ({ rule::keyword("use") , rule::RULE("whitespace*") , rule::OPT(rule::RULE("aliasList")), rule::RULE("lineEnd")}));
 			return library;
 		};
 		

@@ -56,7 +56,7 @@ static void MainLoop( _sp<types::Library> library) {
 	}
 }
 
-int main()
+int main2()
 {
 	 _sp<types::Library> library = std::make_shared<types::Library>(grammar::createFlockLibrary());
 	std::cout << colourize(Colour::YELLOW, "==== Hello Flock ====\n\n") << *library;

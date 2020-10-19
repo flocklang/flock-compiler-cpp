@@ -13,55 +13,161 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef FLOCK_EBNF_RULES_H
-#define FLOCK_EBNF_RULES_H
+#ifndef FLOCK_COMPILER_RULES_H
+#define FLOCK_COMPILER_RULES_H
 
 #include "Util.h"
 #include "LocationSupplier.h"
 #include "ConsoleFormat.h"
+#include "IDCounter.h"
+#include <memory>
 #include <vector>
 #include <map>
 #include <string>
 #include <numeric>
-#include <mutex>
 
  ///
  /// Basic Grammar, that allows to employ basic BNF style grammars in language detection.
  /// 
-using namespace std;
 namespace flock {
 	namespace rule {
-		
+		using namespace std;
+
+
+		static IDCounter ids;
+
+		template<typename T>
+		using StringPtrMap = map<const string, _sp<T>>;
+
 		// forwad declerations as we have cyclic dependencies on declaration.
 		struct Rule;
+		using RuleMap = StringPtrMap<Rule>;
 
 		class TerminalRule;
-
 		class UnaryRule;
 		class CollectionRule;
 
+		template<typename IN, typename OUT>
+		class RulesEvaluator;
+		
+		template<typename IN, typename OUT>
 		struct RuleVisitor;
+
+		class Library;
 
 
 		struct Rule {
 			virtual ~Rule() = default;
-			Rule(const int type) : type(type) {}
-			virtual void accept(_sp<RuleVisitor> visitor) = 0;
+			Rule(const int type) : type(type) {};
 			const int type;
+			const int id = ids.next();
 		};
 
+		class Library {
+		public:
+			_sp <Rule> part(const string partName, _sp <Rule> expression) {
+				parts.emplace(partName, expression);
+				return expression;
+			}
+			_sp <Rule> symbol(const string symbolName, _sp <Rule> expression) {
+				symbols.emplace(symbolName, expression);
+				return expression;
+			}
 
-		struct RuleVisitor {
-			virtual void visit(int type) = 0;
-			virtual void visit(int type, _sp<Rule> child) = 0;
-			virtual void visit(int type, _sp_vec<Rule> children) = 0;
+			_sp<Rule> rule(const string name) {
+				// hoping elvis operators work (apparently not standard c++, so doing it the longer way)
+				auto symRule = symbol(name);
+				return symRule ? symRule : part(name);
+			}
+			_sp<Rule> part(const string partName) {
+				RuleMap::iterator it = parts.find(partName);
+				if (it == parts.end()) {
+						return nullptr;
+				}
+				return it->second;
+			}
+			_sp<Rule> symbol(const string symbolName) {
+				RuleMap::iterator it = symbols.find(symbolName);
+				if (it == symbols.end()) {
+					return nullptr;
+				}
+				return it->second;
+			}
+		protected:
+			RuleMap symbols;
+			RuleMap parts;
+		};
+
+		template<typename IN, typename OUT>
+		class Evaluators {
+		public:
+			
+			_sp<RulesEvaluator<IN, OUT>> evaluatorById(const int typeId) {
+				auto it = evaluators.find(typeId);
+				if (it == evaluators.end()) {
+					return nullptr;
+				}
+				return it->second;
+			}
+
+			_sp<RulesEvaluator<IN, OUT>> evaluator(_sp<Rule> rule) {
+				return evaluatorById(rule->type);
+			}
+
+			void evaluator(const int type, _sp<RulesEvaluator<IN, OUT>> evaluator) {
+				evaluators.emplace(type, evaluator);
+			}
+		protected:
+			map<int, _sp<RulesEvaluator<IN, OUT>>> evaluators;
+		};
+
+		template<typename IN, typename OUT>
+		class RulesEvaluator {
+		public:
+			virtual ~RulesEvaluator() = default;
+			virtual OUT accept(_sp<RuleVisitor<IN,OUT>> visitor, _sp<Rule> rule, IN input) = 0;
+		};
+
+		/// <summary>
+		/// The sole job of the visitor is to glue the aenimic rules to the evaluators, whose job it is to navigate the visitor up and doen the tree.
+		/// </summary>
+		/// <typeparam name="IN"></typeparam>
+		/// <typeparam name="OUT"></typeparam>
+		template<typename IN, typename OUT>
+		class RuleVisitor : public std::enable_shared_from_this<RuleVisitor<IN, OUT>> {
+		public:
+			RuleVisitor(_sp<Library> library, _sp<Evaluators<IN,OUT>> evaluators) : library(library), evaluators(evaluators) {}
+
+			OUT visit(_sp<Rule> rule, IN input) {
+				auto evaluator = evaluators->evaluator(rule);
+				return evaluator->accept(shared_from_this(), rule, input);
+			}
+
+			// delegates for shorthandedness.
+			_sp<Rule> rule(const string name) {
+				return library->rule(name);
+			}
+			_sp<Rule> part(const string partName) {
+				return library->part(partName);
+			}
+			_sp<Rule> symbol(const string symbolName) {
+				return library->symbol(symbolName);
+			}
+		protected:
+			_sp<Library> library;
+			_sp<Evaluators<IN,OUT>> evaluators;
+		};
+
+		class TerminalRule : public Rule {
+		public:
+			TerminalRule(const int type) : Rule(type) {}
 		};
 
 		class UnaryRule : public Rule {
 		public:
-			UnaryRule(int type, _sp<Rule> child) : child(child), Rule(type) {}
-			virtual void accept(_sp<RuleVisitor> visitor) override {
-				visitor->visit(type, child);
+			UnaryRule(const int type, _sp<Rule> child) : child(child), Rule(type) {};
+			_sp<Rule> getChild() {
+				return child;
 			}
 		protected:
 			_sp<Rule> child;
@@ -69,162 +175,137 @@ namespace flock {
 
 		class CollectionRule : public Rule {
 		public:
-			CollectionRule(int type, _sp_vec<Rule> children) : children(children), Rule(type) {}
-			CollectionRule(int type, initializer_list<_sp<Rule>> children) : CollectionRule(type, _sp_vec<Rule>(children)) {}
+			CollectionRule(const int type, _sp_vec<Rule> children) : children(children), Rule(type) {}
+			CollectionRule(const int type, initializer_list<_sp<Rule>> children) : CollectionRule(type, _sp_vec<Rule>(children)) {}
 
-			virtual void accept(_sp<RuleVisitor> visitor) override {
-				visitor->visit(type, children);
+			_sp_vec<Rule> getChildren() {
+				return children;
 			}
 		protected:
 			_sp_vec<Rule> children;
 		};
 
-		class TerminalRule : public Rule {
+		template<typename T>
+		class ValuesRule : public TerminalRule {
 		public:
-			TerminalRule(int type) : Rule(type) {}
-			virtual void accept(_sp<RuleVisitor> visitor) override {
-				visitor->visit(type);
+			ValuesRule(int type, vector<T> values) : TerminalRule(type), values(values) {}
+
+			_sp_vec<T> getValues() {
+				return values;
 			}
+		protected:
+			vector<T> values;
 		};
 
 
-
 		namespace trial {
-			enum Terminals {
+			enum RuleTypes {
+				// Terminals
 				Eof,
-				Any
-			};
-			enum Collections {
+				Any,
+				// Unary
+				AnyBut,
+				Repeat,
+				Optional,
+				// Collections
 				Sequence,
 				Or,
 				And,
-				Xor
-			};
-			struct TrialVisitor : RuleVisitor {
-
-				virtual void visit(int type, int value) = 0;
-				virtual void visit(int type, int one, int two) = 0;
-				virtual void visit(int type, vector<int> values) = 0;
-				virtual void visit(int type, string value) = 0;
-				virtual void visit(int type, vector<string> values) = 0;
+				XOr
 			};
 
-
-			class CharRule : public TerminalRule {
-			public:
-				CharRule(int type, int value) : TerminalRule(type), value(value) {}
-				virtual void accept(_sp<RuleVisitor> visitor) override {
-					std::dynamic_pointer_cast<TrialVisitor> (visitor)->visit(type, value);
+			struct BracketHints {
+				BracketHints(const bool bracketed = false, const int collection = -1) : bracketed(bracketed), collection(collection) {}
+				BracketHints bracket(const bool bracket) {
+					return BracketHints(bracket, collection);
 				}
-				int value;
-			};
-
-			class TwoCharRule : public TerminalRule {
-			public:
-				TwoCharRule(int type, int one, int two) : TerminalRule(type), one(one), two(two) {}
-				virtual void accept(_sp<RuleVisitor> visitor) override {
-					std::dynamic_pointer_cast<TrialVisitor> (visitor)->visit(type, one, two);
+				BracketHints coll(const int coll) {
+					return BracketHints(bracketed, coll);
 				}
-				int one;
-				int two;
-			};
-
-			class CharsRule : public TerminalRule {
-			public:
-				CharsRule(int type, vector<int> values) : TerminalRule(type), values(values) {}
-				virtual void accept(_sp<RuleVisitor> visitor) override {
-					std::dynamic_pointer_cast<TrialVisitor> (visitor)->visit(type, values);
-				}
-				vector<int> values;
-			};
-
-			class StringRule : public TerminalRule {
-			public:
-				StringRule(int type, string values) : TerminalRule(type), value(value) {}
-				virtual void accept(_sp<RuleVisitor> visitor) override {
-					std::dynamic_pointer_cast<TrialVisitor> (visitor)->visit(type, value);
-				}
-				string value;
-			};
-
-			class StringsRule : public TerminalRule {
-			public:
-				StringsRule(int type, vector<string> values) : TerminalRule(type), values(values) {}
-				virtual void accept(_sp<RuleVisitor> visitor) override {
-					std::dynamic_pointer_cast<TrialVisitor> (visitor)->visit(type, values);
-				}
-				vector<string> values;
-			};
-
-			class PrintVisitor : public TrialVisitor {
-			public:
-				PrintVisitor(const bool bracketed = false, const int collection = -1) : bracketed(bracketed), parentCollectionType(parentCollectionType) {}
 				const bool bracketed;
-				const int parentCollectionType;
-				string collected;
+				const int collection;
+			};
+			using PrintVisitor = RuleVisitor<BracketHints, string>;
+
+			class PrintTerminalEval : public RulesEvaluator<BracketHints, string> {
+			public:
+				PrintTerminalEval(const string value) : value(value), RulesEvaluator(){}
+
+				virtual string accept(_sp<PrintVisitor> visitor, _sp<Rule> baseRule, BracketHints bracketHints) override {
+					return value;
+				}
 			protected:
-				virtual void visit(int type)override {
-					switch ((Terminals)type) {
-					case Eof:
-						collected += "? EOF ?";
-						break;
-					case Any:
-						collected += "? ANY ?";
-						break;
-					default:
-					}
-				}
-				virtual void visit(int type, int value) override {
+				const string value;
+			};
 
-				}
-				virtual void visit(int type, int one, int two) override {
+			class PrintUnaryEval : public RulesEvaluator<BracketHints, string> {
+			public:
+				PrintUnaryEval(const string start, const string end = "", bool hasBrackets = false) : start(start), end(end), hasBrackets(hasBrackets), RulesEvaluator() {}
 
+				virtual string accept(_sp<PrintVisitor> visitor, _sp<Rule> baseRule, BracketHints bracketHints) override {
+					const auto rule = std::dynamic_pointer_cast<UnaryRule>(baseRule);
+					string collected = visitor->visit(rule->getChild(), BracketHints(hasBrackets, -1));
+					return start + collected + end;
 				}
-				virtual void visit(int type, string value) override {
+			protected:
+				const string start;
+				const string end;
+				const bool hasBrackets;
+			};
 
-				}
-				virtual void visit(int type, vector<int> values) override {
+			class PrintCollectionEval : public RulesEvaluator<BracketHints, string> {
+			public:
+				PrintCollectionEval(const string seperator) : seperator(seperator), RulesEvaluator() {}
+				virtual string accept(_sp<PrintVisitor> visitor, _sp<Rule> baseRule, BracketHints bracketHints) override {
+					const auto rule = std::dynamic_pointer_cast<CollectionRule>(baseRule);
+					const int type = (RuleTypes)rule->type;
+					const bool aCollection = rule->getChildren().size() > 1;
+					// if we have one or less children, we aren't grouping anything
+					// if the parent is bracketed, or the collection type is the same, its clearer not use to brackets
+					const bool shouldBracket = aCollection && !(bracketHints.bracketed || type == bracketHints.collection);
 
-				}
-				virtual void visit(int type, vector<string> values) override {
-
-				}
-				virtual void visit(int type, _sp<Rule> child) override {
-
-				}
-				virtual void visit(int type, _sp_vec<Rule> children) override {
-					string seperator;
-					switch ((Collections)type) {
-					case Sequence:
-						seperator = ", ";
-						break;
-					case Or:
-						seperator = " | ";
-						break;
-					case And:
-						seperator = " & ";
-						break;
-					case Xor:
-						seperator = " ^ ";
-						break;
-					default:
-					}
 					bool first = true;
-					bool shouldBracket = type != parentCollectionType || !bracketed;
-					for (auto rule : children) {
-						auto printVisitor = make_shared<PrintVisitor>(shouldBracket, type);
-						rule->accept(printVisitor);
+					string collected;
+					if (shouldBracket) {
+						collected += "(";
+					}
+					for (auto rule : rule->getChildren()) {
 						if (first) {
 							first = false;
 						}
 						else {
 							collected += seperator;
 						}
-						collected += printVisitor->collected;
+						collected += visitor->visit(rule, BracketHints(!aCollection, type));
 					}
-				}
-			};
 
+					if (shouldBracket) {
+						collected += ")";
+					}
+					return collected;
+				}
+			protected:
+				const string seperator;
+			};
+			/*
+			
+				AnyBut,
+				Repeat,
+				Optional,
+				*/
+			static Evaluators<BracketHints, string> printEvaluators() {
+				Evaluators<BracketHints, string> evaluators;
+				evaluators.evaluator(And, make_shared<PrintCollectionEval>(" & "));
+				evaluators.evaluator(Or, make_shared<PrintCollectionEval>(" | "));
+				evaluators.evaluator(XOr, make_shared<PrintCollectionEval>(" ^ "));
+				evaluators.evaluator(Sequence, make_shared<PrintCollectionEval>(", "));
+				evaluators.evaluator(Eof, make_shared<PrintTerminalEval>("? EOF ?"));
+				evaluators.evaluator(Any, make_shared<PrintTerminalEval>("? Any ?"));
+				evaluators.evaluator(AnyBut, make_shared<PrintUnaryEval>("-"));
+				evaluators.evaluator(Repeat, make_shared<PrintUnaryEval>("{", "}",true));
+				evaluators.evaluator(Optional, make_shared<PrintUnaryEval>("[", "]", false));
+				return evaluators;
+			}
 
 		}
 	}

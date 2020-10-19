@@ -17,8 +17,8 @@
 #ifndef FLOCK_COMPILER_CACHED_SUPPLIER_H
 #define FLOCK_COMPILER_CACHED_SUPPLIER_H
 
-#include "Supplier.h"
 #include "Util.h"
+#include "Supplier.h"
 #include <deque>
 #include <vector>
 #include <memory>
@@ -29,8 +29,6 @@ namespace flock {
         template<typename Contents, typename R = _sp_vec<Contents>>
         class CachedSupplier : public  Supplier<_sp<Contents>> {
         public:
-
-    
 
             virtual R pollRange(const int amount = 1, const int startIdx = 0) = 0;
 
