@@ -9,11 +9,11 @@ using namespace flock::rule::trial;
 static string tryItOut() {
 	Evaluators<BracketHints, string> evaluators = printEvaluators();
 	Library library;
-	auto any = make_shared <TerminalRule>((int)Any);
-	auto eof = make_shared <TerminalRule>((int)Eof);
-	_sp<Rule> OR = make_shared<CollectionRule>(CollectionRule((int)Or, { any, eof }));
-	_sp<Rule> REPEAT = make_shared<UnaryRule>((int)Repeat, OR);
-	_sp<Rule> COLL = make_shared<CollectionRule>(CollectionRule((int)Sequence, { OR, REPEAT, any }));
+	auto any = make_shared <TerminalRule>(Any);
+	auto eof = make_shared <TerminalRule>(Eof);
+	_sp<Rule> OR = make_shared<CollectionRule>(CollectionRule(Or, { any, eof }));
+	_sp<Rule> REPEAT = make_shared<UnaryRule>(Repeat, OR);
+	_sp<Rule> COLL = make_shared<CollectionRule>(CollectionRule(Sequence, { OR, REPEAT, any }));
 	library.symbol("myRule", COLL);
 	_sp< PrintVisitor>  visitor = make_shared<PrintVisitor>(make_shared<Library>(library), make_shared<Evaluators<BracketHints, string>>(evaluators));
 	_sp< PrintVisitor> visitorSP = visitor->shared_from_this();
