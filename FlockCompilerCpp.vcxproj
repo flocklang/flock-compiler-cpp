@@ -168,17 +168,20 @@
     <ClInclude Include="ConsoleCharSupplier.h" />
     <ClInclude Include="CompilerFix.h" />
     <ClInclude Include="ConsoleFormat.h" />
+    <ClInclude Include="EBNFRulePrinter.h" />
     <ClInclude Include="FileCharSupplier.h" />
     <ClInclude Include="FlockGrammar.h" />
     <ClInclude Include="IDCounter.h" />
     <ClInclude Include="LogicRules.h" />
     <ClInclude Include="RuleFunctions.h" />
     <ClInclude Include="resource.h" />
+    <ClInclude Include="RuleHistory.h" />
     <ClInclude Include="Rules.h" />
     <ClInclude Include="RuleTypes.h" />
     <ClInclude Include="LocationSupplier.h" />
     <ClInclude Include="Parser.h" />
     <ClInclude Include="Source.h" />
+    <ClInclude Include="StringRules.h" />
     <ClInclude Include="Supplier.h" />
     <ClInclude Include="Util.h" />
   </ItemGroup>

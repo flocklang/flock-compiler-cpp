@@ -130,6 +130,41 @@ namespace flock {
 			};
 
 			/// <summary>
+			/// Sometime we may just want to wrap a strategy, to implement common functionality, for instance history.
+			/// </summary>
+			/// <param name="rule"></param>
+			/// <param name="input"></param>
+			/// <returns></returns>
+			template<typename IN, typename OUT>
+			class WrappingRuleStrategy : RuleStrategy <IN, OUT> {
+				WrappingRuleStrategy(_sp<RuleStrategy <IN, OUT>> wrapped) : wrapped(wrapped) {}
+			public:
+				virtual OUT accept(_sp<RuleVisitor<IN, OUT>> visitor, _sp<Rule> baseRule, IN input) override {
+					IN newInput = before(visitor, baseRule, input);
+					OUT wrappedOutput = wrapped->accept(visitor, baseRule, newInput);
+					return after(visitor, baseRule, input, newInput, wrappedOutput);
+				}
+				/// <summary>
+				/// if you don't want too do anything, simply implement by
+				/// return input;
+				/// </summary>
+				/// <returns></returns>
+				virtual IN before(_sp<RuleVisitor<IN, OUT>> visitor, _sp<Rule> baseRule, IN input) = 0;
+				/// <summary>
+				/// if you don't want too do anything, simply implement by
+				/// return wrappedOutput;
+				/// </summary>
+				/// <returns></returns>
+				virtual OUT after(_sp<RuleVisitor<IN, OUT>> visitor, _sp<Rule> baseRule, IN originalInput, IN wrappedInput, OUT wrappedOutput) = 0;
+
+				_sp<RuleStrategy <IN, OUT>> getWrapped() {
+					return wrapped;
+				}
+			protected:
+				_sp<RuleStrategy <IN, OUT>> wrapped;
+			};
+
+			/// <summary>
 			/// The sole job of the visitor is to glue the aenimic rules to the strategys, whose job it is to navigate the visitor up and doen the tree.
 			/// </summary>
 			/// <typeparam name="IN"></typeparam>
@@ -144,15 +179,21 @@ namespace flock {
 					return strategy->accept(this->shared_from_this(), rule, input);
 				}
 
+				OUT visit(const string alias, IN input) {
+					_sp<Rule> rule = getRule(alias);
+					auto strategy = strategies->getStrategy(rule);
+					return strategy->accept(this->shared_from_this(), rule, input);
+				}
+
 				// delegates for shorthandedness.
-				_sp<Rule> rule(const string name) {
+				_sp<Rule> getRule(const string name) {
 					return library->getRule(name);
 				}
-				_sp<Rule> part(const string partName) {
-					return library->part(partName);
+				_sp<Rule> getPart(const string partName) {
+					return library->getPart(partName);
 				}
-				_sp<Rule> symbol(const string symbolName) {
-					return library->symbol(symbolName);
+				_sp<Rule> getSymbol(const string symbolName) {
+					return library->getSymbol(symbolName);
 				}
 			protected:
 				_sp<Library> library;

@@ -40,6 +40,9 @@
     <Filter Include="Header Files\Rules">
       <UniqueIdentifier>{c5130bae-e72d-4218-a881-bce8dd1c35e6}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Header Files\Rules\EBNF">
+      <UniqueIdentifier>{b6bfa2b4-7406-487c-97f4-c833d15e2812}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="FlockCompilerCpp.cpp">
@@ -122,6 +125,15 @@
     </ClInclude>
     <ClInclude Include="LogicRules.h">
       <Filter>Header Files\Rules</Filter>
+    </ClInclude>
+    <ClInclude Include="StringRules.h">
+      <Filter>Header Files\Rules</Filter>
+    </ClInclude>
+    <ClInclude Include="RuleHistory.h">
+      <Filter>Header Files\Rules</Filter>
+    </ClInclude>
+    <ClInclude Include="EBNFRulePrinter.h">
+      <Filter>Header Files\Rules\EBNF</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
