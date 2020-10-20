@@ -37,7 +37,7 @@ namespace flock {
 				Optional = -4,
 				// Specialist Unary
 				Repeat = -5,
-				Alias = -5,
+				Alias = -6,
 				// Collections
 				Sequence = -7,
 				Or = -8,
@@ -79,6 +79,12 @@ namespace flock {
 				const string alias;
 			};
 
+			/// <summary>
+			/// Asks the visitor too locate the alias rule, and then visit that.
+			/// Normally this would be used for actual evaluation, rather than printing the rule tree.
+			/// </summary>
+			/// <typeparam name="IN"></typeparam>
+			/// <typeparam name="OUT"></typeparam>
 			template<typename IN, typename OUT>
 			class AliasPassThroughRuleStrategy : RuleStrategy <IN, OUT> {
 			public:

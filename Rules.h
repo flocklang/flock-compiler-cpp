@@ -56,10 +56,16 @@ namespace flock {
 
 			class Library;
 
-
+			/// <summary>
+			/// All rules have a unique id on instantiation.
+			/// All rules have a type to be used by the evaluator. 
+			/// 
+			/// Negative Type values are reserved by the API, typically they are in the form of enums.
+			/// </summary>
 			struct Rule {
 				virtual ~Rule() = default;
 				Rule(const int type) : type(type) {};
+
 				const int type;
 				const int id = ids.next();
 			};
