@@ -132,4 +132,5 @@ int main()
 {
 	std::cout << "Hello\n";
 	std::cout << tryItOut();
+	return 0;
 }

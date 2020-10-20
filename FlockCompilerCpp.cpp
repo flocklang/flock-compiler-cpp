@@ -61,6 +61,7 @@ int main2()
 	 _sp<types::Library> library = std::make_shared<types::Library>(grammar::createFlockLibrary());
 	std::cout << colourize(Colour::YELLOW, "==== Hello Flock ====\n\n") << *library;
 	MainLoop(library);
+	return 0;
 }
 
 // Run program: Ctrl + F5 or Debug > Start Without Debugging menu

@@ -94,6 +94,33 @@ namespace flock {
 				}
 			};
 
+			template<typename IN, typename OUT>
+			class HasFailureRuleStrategy : RuleStrategy <IN, OUT> {
+			public:
+				virtual bool isFailure(OUT out) = 0;
+			};
+
+			template<typename IN, typename OUT>
+			class AndLogicRuleStrategy : public HasFailureRuleStrategy <IN, OUT> {
+			public:
+				virtual OUT accept(_sp<RuleVisitor<IN, OUT>> visitor, _sp<Rule> baseRule, IN input) override {
+					const auto rule = std::dynamic_pointer_cast<CollectionRule>(baseRule);
+					auto children = rule->getChildren();
+					OUT firstOut = visitor->visit(children.at(0), input);
+					if (this->isFailure(firstOut)) {
+						return firstOut;
+					}
+					for (auto rule = begin(children) + 1; rule != end(children); ++rule) {
+						OUT nextOut = visitor->visit((*rule), input);
+						if (this->isFailure(nextOut)) {
+							return nextOut;
+						}
+					}
+					return firstOut;
+				}
+
+			};
+
 			// Terminal Rules
 
 			static _sp<Rule> Any() {
