@@ -31,18 +31,19 @@ namespace flock {
 			enum LogicRules {
 				// Terminals
 				Any = -1,
+				Eof = -2,
 				// Unary
-				Not = -2,
-				AnyBut = -3,
-				Optional = -4,
+				Not = -3,
+				AnyBut = -4,
+				Optional = -5,
 				// Specialist Unary
-				Repeat = -5,
-				Alias = -6,
+				Repeat = -6,
+				Alias = -7,
 				// Collections
-				Sequence = -7,
-				Or = -8,
-				And = -9,
-				XOr = -10
+				Sequence = -8,
+				Or = -9,
+				And = -10,
+				XOr = -11
 			};
 
 			/// <summary>
@@ -88,7 +89,7 @@ namespace flock {
 			/// <typeparam name="IN"></typeparam>
 			/// <typeparam name="OUT"></typeparam>
 			template<typename IN, typename OUT>
-			class AliasPassThroughRuleStrategy : RuleStrategy <IN, OUT> {
+			class AliasRuleStrategy : RuleStrategy <IN, OUT> {
 			public:
 				virtual OUT accept(_sp<RuleVisitor<IN, OUT>> visitor, _sp<Rule> baseRule, IN input) override {
 					const auto aliasRule = std::dynamic_pointer_cast<AliasRule>(baseRule);
@@ -101,7 +102,7 @@ namespace flock {
 			/// </summary>
 			/// <typeparam name="OUT"></typeparam>
 			template<typename OUT>
-			class HasFailureStrategyHelper {
+			class FailureStrategyHelper {
 			public:
 				virtual bool isFailure(OUT out) = 0;
 				virtual OUT makeFailure() = 0;
@@ -113,7 +114,7 @@ namespace flock {
 			/// <typeparam name="IN"></typeparam>
 			/// <typeparam name="OUT"></typeparam>
 			template<typename IN, typename OUT>
-			class SequentialInputStrategyHelper {
+			class SequenceStrategyHelper {
 			public:
 				virtual IN nextInFromPrevious(IN previousInput, OUT previousOutput) = 0;
 			};
@@ -124,9 +125,21 @@ namespace flock {
 			/// <typeparam name="IN"></typeparam>
 			/// <typeparam name="OUT"></typeparam>
 			template<typename IN, typename OUT>
-			class EmptySuccessStrategyHelper {
+			class SuccessStrategyHelper {
 			public:
 				virtual OUT makeSuccess(IN input) = 0;
+			};
+
+			/// <summary>
+			/// Implement as a mixin, and then use multiple inheritence to save time.
+			/// If this is a stream then we are not incrementing, but remaining where we are.
+			/// </summary>
+			/// <typeparam name="IN"></typeparam>
+			/// <typeparam name="OUT"></typeparam>
+			template<typename IN, typename OUT>
+			class EmptySuccessStrategyHelper {
+			public:
+				virtual OUT makeEmptySuccess(IN input) = 0;
 			};
 
 			/// <summary>
@@ -134,13 +147,13 @@ namespace flock {
 			/// </summary>
 			/// <typeparam name="IN"></typeparam>
 			template<typename IN>
-			class EndCheckStrategyHelper {
+			class EndStrategyHelper {
 			public:
 				virtual bool isEnd(IN input) = 0;
 			};
 
 			template<typename IN, typename OUT>
-			class AndLogicRuleStrategy : public HasFailureStrategyHelper <OUT>, public RuleStrategy <IN, OUT> {
+			class AndRuleStrategy : public FailureStrategyHelper <OUT>, public RuleStrategy <IN, OUT> {
 			public:
 				virtual bool isFailure(OUT out) override = 0;
 				virtual OUT makeFailure() override = 0;
@@ -164,7 +177,7 @@ namespace flock {
 			};
 
 			template<typename IN, typename OUT>
-			class OrLogicRuleStrategy : public HasFailureStrategyHelper <OUT>, public RuleStrategy <IN, OUT> {
+			class OrRuleStrategy : public FailureStrategyHelper <OUT>, public RuleStrategy <IN, OUT> {
 			public:
 				virtual bool isFailure(OUT out) override = 0;
 				virtual OUT makeFailure() override = 0;
@@ -188,7 +201,7 @@ namespace flock {
 			};
 
 			template<typename IN, typename OUT>
-			class XOrLogicRuleStrategy : public HasFailureStrategyHelper <OUT>, public RuleStrategy <IN, OUT> {
+			class XOrRuleStrategy : public FailureStrategyHelper <OUT>, public RuleStrategy <IN, OUT> {
 			public:
 				virtual bool isFailure(OUT out) override = 0;
 				virtual OUT makeFailure() override = 0;
@@ -219,7 +232,7 @@ namespace flock {
 
 
 			template<typename IN, typename OUT>
-			class SeqLogicRuleStrategy : public HasFailureStrategyHelper <OUT>, public SequentialInputStrategyHelper<IN, OUT>, public RuleStrategy <IN, OUT> {
+			class SeqRuleStrategy : public FailureStrategyHelper <OUT>, public SequenceStrategyHelper<IN, OUT>, public RuleStrategy <IN, OUT> {
 			public:
 				virtual bool isFailure(OUT out) override = 0;
 				virtual OUT makeFailure() override = 0;
@@ -246,7 +259,7 @@ namespace flock {
 			};
 
 			template<typename IN, typename OUT>
-			class OptionalLogicRuleStrategy : public HasFailureStrategyHelper <OUT>, public EmptySuccessStrategyHelper<IN, OUT>, public RuleStrategy <IN, OUT> {
+			class OptionalRuleStrategy : public FailureStrategyHelper <OUT>, public SuccessStrategyHelper<IN, OUT>, public RuleStrategy <IN, OUT> {
 			public:
 				virtual bool isFailure(OUT out) override = 0;
 				virtual OUT makeSuccess(IN input) override = 0;
@@ -265,11 +278,11 @@ namespace flock {
 			};
 
 			template<typename IN, typename OUT>
-			class NotLogicRuleStrategy : public HasFailureStrategyHelper <OUT>, public EmptySuccessStrategyHelper<IN, OUT>, public RuleStrategy <IN, OUT> {
+			class NotRuleStrategy : public FailureStrategyHelper <OUT>, public EmptySuccessStrategyHelper<IN, OUT>, public RuleStrategy <IN, OUT> {
 			public:
 				virtual bool isFailure(OUT out) override = 0;
 				virtual OUT makeFailure() override = 0;
-				virtual OUT makeSuccess(IN input) override = 0;
+				virtual OUT makeEmptySuccess(IN input) override = 0;
 
 				virtual OUT accept(_sp<RuleVisitor<IN, OUT>> visitor, _sp<Rule> baseRule, IN input) override {
 					const auto rule = std::dynamic_pointer_cast<UnaryRule>(baseRule);
@@ -277,7 +290,7 @@ namespace flock {
 
 					const OUT currentOut = visitor->visit(child, input);
 					if (this->isFailure(currentOut)) {
-						return this->makeSuccess(input); // is a success
+						return this->makeEmptySuccess(input); // is a success, but don't move forward.
 					}
 
 					return this->makeFailure(); // return failure.
@@ -285,9 +298,9 @@ namespace flock {
 			};
 
 			template<typename IN, typename OUT>
-			class RepeatLogicRuleStrategy :
-				public SequentialInputStrategyHelper<IN, OUT>,
-				public HasFailureStrategyHelper <OUT>,
+			class RepeatRuleStrategy :
+				public SequenceStrategyHelper<IN, OUT>,
+				public FailureStrategyHelper <OUT>,
 				public RuleStrategy<IN, OUT> {
 			public:
 				virtual bool isFailure(OUT out) override = 0;
@@ -341,10 +354,10 @@ namespace flock {
 
 
 			template<typename IN, typename OUT>
-			class AnyLogicRuleStrategy :
-				public EmptySuccessStrategyHelper<IN, OUT>,
-				public HasFailureStrategyHelper<OUT>,
-				public EndCheckStrategyHelper<IN>,
+			class AnyRuleStrategy :
+				public SuccessStrategyHelper<IN, OUT>,
+				public FailureStrategyHelper<OUT>,
+				public EndStrategyHelper<IN>,
 				public RuleStrategy<IN, OUT> {
 			public:
 				virtual OUT makeFailure() override = 0;
@@ -360,11 +373,32 @@ namespace flock {
 			};
 
 
+
 			template<typename IN, typename OUT>
-			class AnyButLogicRuleStrategy :
-				public HasFailureStrategyHelper <OUT>,
-				public EmptySuccessStrategyHelper<IN, OUT>,
-				public EndCheckStrategyHelper<IN>,
+			class EofRuleStrategy :
+				public SuccessStrategyHelper<IN, OUT>,
+				public FailureStrategyHelper<OUT>,
+				public EndStrategyHelper<IN>,
+				public RuleStrategy<IN, OUT> {
+			public:
+				virtual OUT makeFailure() override = 0;
+				virtual OUT makeSuccess(IN input) override = 0;
+				virtual bool isEnd(IN input) override = 0;
+
+				virtual OUT accept(_sp<RuleVisitor<IN, OUT>> visitor, _sp<Rule> rule, IN input) override {
+					if (this->isEnd(input)) {
+						return this->makeSuccess();
+					}
+					return this->makeFailure(input);
+				}
+			};
+
+
+			template<typename IN, typename OUT>
+			class AnyButRuleStrategy :
+				public FailureStrategyHelper <OUT>,
+				public SuccessStrategyHelper<IN, OUT>,
+				public EndStrategyHelper<IN>,
 				public RuleStrategy <IN, OUT> {
 			public:
 				virtual bool isFailure(OUT out) override = 0;
@@ -393,6 +427,10 @@ namespace flock {
 
 			static _sp<Rule> Any() {
 				return _terminalRule(LogicRules::Any);
+			}
+
+			static _sp<Rule> Eof() {
+				return _terminalRule(LogicRules::Eof);
 			}
 
 			// Collection Rules
