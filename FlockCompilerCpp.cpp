@@ -32,8 +32,8 @@ using namespace flock::ebnf;
 
 
 static void MainLoop( _sp<types::Library> library) {
-	ConsoleCharSupplier consoleSupplier;
-	_sp<LocationSupplier> locationSupplier  = make_shared<LocationSupplier>(LocationSupplier(&consoleSupplier));
+	_sp<ConsoleCharSupplier> consoleSupplier = make_shared<ConsoleCharSupplier>();
+	_sp<LocationSupplier> locationSupplier  = make_shared<LocationSupplier>(consoleSupplier);
 
 	std::cout << colourize(Colour::DARK_CYAN, "\nready> ");
 	while (true) {
@@ -41,7 +41,7 @@ static void MainLoop( _sp<types::Library> library) {
 
 		string ruleName = get<0>(ret);
 		if (ruleName.empty() || ruleName == "eof") {
-			consoleSupplier.clear();
+			consoleSupplier->clear();
 			locationSupplier->clear();
 			std::cout << colourize(Colour::DARK_MAGENTA, "\nEOF")<< colourize(Colour::DARK_CYAN, "\nready> ");
 		} else {

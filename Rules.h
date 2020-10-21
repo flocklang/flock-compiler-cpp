@@ -25,6 +25,7 @@
 #include <map>
 #include <string>
 #include <numeric>
+#include <assert.h> 
 
  ///
  /// Basic Grammar, that allows to employ basic BNF style grammars in language detection.
@@ -223,7 +224,9 @@ namespace flock {
 
 			class CollectionRule : public Rule {
 			public:
-				CollectionRule(const int type, _sp_vec<Rule> children) : Rule(type), children(children) {}
+				CollectionRule(const int type, _sp_vec<Rule> children) : Rule(type), children(children) {
+					assert(!children.empty());
+				}
 				CollectionRule(const int type, initializer_list<_sp<Rule>> children) : CollectionRule(type, _sp_vec<Rule>(children)) {}
 
 				_sp_vec<Rule> getChildren() {

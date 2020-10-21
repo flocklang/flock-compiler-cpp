@@ -15,6 +15,7 @@
  */
 #ifndef FLOCK_COMPILER_COMPILER_FIX_H
 #define FLOCK_COMPILER_COMPILER_FIX_H
+
  // Microsoft Visual Studio Fixes for LLVM
 #ifdef _MSC_VER
 #pragma warning(disable: 4146) // unary minus operator applied to unsigned type, result still unsigned

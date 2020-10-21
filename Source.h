@@ -36,57 +36,47 @@ namespace flock {
 			const int column;
 			const int position;
 			const int character;
+
 			friend std::ostream& operator<<(std::ostream& os, const Location& location) {
 				return os << "line: " << location.line << ", column: " << location.column << ", position: " << location.position << ", character: " << location.character;
 			};
-			/*
-* Helper for the providing the next location, based on the previous location.
-*/
-			static const Location next(Location last, const int character) {
-				if (isNewLine(last.character)) {
-					return Location(last.line + 1, 1, last.position + 1, character);
+
+			///
+			/// Helper for the providing the next location, based on the previous location.
+			/// 
+			static const _sp<Location> next(_sp<Location> last, const int character) {
+				if (last) {
+					if (isNewLine(last->character)) {
+						return make_shared<Location>(last->line + 1, 1, last->position + 1, character);
+					}
+					return make_shared<Location>(last->line, last->column + 1, last->position + 1, character);
 				}
-				else {
-					return Location(last.line, last.column + 1, last.position + 1, character);
-				}
+				return make_shared<Location>(character);
 			}
 		};
 
 		struct Range {
-			Range(const int character) : Range{ std::make_shared<Location>(Location(character)) } {};
-			Range( std::shared_ptr < Location> start) : start{ start }, end{ start } {
-				source.push_back(start->character); 
-			};
-			Range( std::shared_ptr < Location> start,  std::shared_ptr < Location> end) : start{ start }, end{ end } {
-				source.push_back(start->character);
-				source.push_back(end->character);
-			};
-			Range(const Range start,  std::shared_ptr < Location> end) : start{ start.start }, end{ end } {
-				source.append(start.source);
-				source.push_back(end->character);
-			};
-			Range(const Range start, const Range end) : start{ start.start }, end{ end.end } {
-				source.append(start.source);
-				source.append(end.source);
-			};
-			Range( std::shared_ptr < Range> start,  std::shared_ptr < Range> end) : start{ start->start }, end{ end->end } {
-				source.append(start->source);
-				source.append(end->source);
-			};
+			Range(std::shared_ptr<Location> start)
+				: start{ start }, end{ start }, source(std::string({ (char)start->character })) {}
+			Range(const int character)
+				: Range{ std::make_shared<Location>(character) } {};
+			Range(std::shared_ptr<Location> start, std::shared_ptr<Location> end)
+				: start{ start }, end{ end }, source(std::string({ (char)start->character }) + std::string({ (char)end->character })) {}
+			Range(const Range start, std::shared_ptr<Location> end)
+				: start{ start.start }, end{ end }, source(start.source + std::string({ (char)end->character })) {}
+			Range(std::shared_ptr<Range> start, std::shared_ptr<Range> end)
+				: start{ start->start }, end{ end->end }, source(start->source + end->source) {}
 
-			Range(const Range& other) : start(other.start), end(other.end) {
-				source.append(other.source);
-			};
+			Range(const Range& other) : start(other.start), end(other.end), source(other.source) {}
 
 			const std::shared_ptr<Location> start;
 			const std::shared_ptr<Location> end;
-			std::string source;
+			const std::string source;
 
 			friend std::ostream& operator<<(std::ostream& os, const Range& range) {
 				return os << "start: {line: " << range.start->line << ", column: " << range.start->column << ", position: " << range.start->position << "}"
 					<< ", end: {line: " << range.end->line << ", column: " << range.end->column << ", position: " << range.end->position << "}, source: " << range.source;
 			};
-
 			std::string toStringNoText() {
 				std::string ret;
 				ret.append("start: {line: ").append(std::to_string(start->line))

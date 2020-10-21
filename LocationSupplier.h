@@ -26,7 +26,7 @@ namespace flock {
 	namespace supplier {
 		class LocationSupplier : public CachedSupplier <Location, _sp<Range>> {
 		public:
-			LocationSupplier(Supplier<int>* charSupplier) : charSupplier(charSupplier) {}
+			LocationSupplier(_sp<Supplier<int>> charSupplier) : charSupplier(charSupplier) {}
 
 			_sp<Range> pollRange(const int amount = 1, const int startIdx = 0) override {
 				auto option = poll(startIdx);
@@ -49,15 +49,9 @@ namespace flock {
 			{
 				int next = charSupplier->supply();
 				if (next == EOF) {
-					previous = nullptr;
+					return previous = nullptr;
 				}
-				else if (previous) {
-					previous = std::make_shared<Location>(Location::next(*previous, next));
-				}
-				else {
-					previous = std::make_shared<Location>(Location(next));
-				}
-				return previous;
+				return previous = Location::next(previous, next);
 			}
 			void clear() {
 				store.clear();
@@ -66,7 +60,7 @@ namespace flock {
 
 		protected:
 			_sp<Location> previous = nullptr;
-			Supplier<int>* charSupplier;
+			_sp<Supplier<int>> charSupplier;
 		};
 
 	}
