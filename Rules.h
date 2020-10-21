@@ -214,7 +214,9 @@ namespace flock {
 
 			class UnaryRule : public Rule {
 			public:
-				UnaryRule(const int type, _sp<Rule> child) : Rule(type), child(child) {};
+				UnaryRule(const int type, _sp<Rule> child) : Rule(type), child(child) {
+					assert(child); // no nullptrs
+				};
 				_sp<Rule> getChild() {
 					return child;
 				}
@@ -222,10 +224,21 @@ namespace flock {
 				_sp<Rule> child;
 			};
 
+			/// <summary>
+			/// The strategies based on these rules have an explicit contract. Meaning collections > 0 and no nullptrs.
+			/// 
+			/// If you want to define a seperate rule that supports empty collections and nullptrs be my guest. 
+			/// </summary>
 			class CollectionRule : public Rule {
 			public:
 				CollectionRule(const int type, _sp_vec<Rule> children) : Rule(type), children(children) {
-					assert(!children.empty());
+#ifndef NDEBUG
+					// If NDEBUG defined, it turns of assertion anyway, but lets remove the loop as well.
+					assert(!children.empty()); // empty collection is meaningless.
+					for (auto child : children) {
+						assert(child); // no nullptrs
+					}
+#endif
 				}
 				CollectionRule(const int type, initializer_list<_sp<Rule>> children) : CollectionRule(type, _sp_vec<Rule>(children)) {}
 
