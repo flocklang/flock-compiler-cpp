@@ -31,7 +31,7 @@ namespace flock {
 			enum LogicRules {
 				// Terminals
 				Any = -1,
-				Eof = -2,
+				End = -2,
 				// Unary
 				Not = -3,
 				AnyBut = -4,
@@ -384,7 +384,7 @@ namespace flock {
 
 
 			template<typename IN, typename OUT>
-			class EofRuleStrategy :
+			class EndRuleStrategy :
 				public EmptySuccessStrategyMixin<IN, OUT>,
 				public FailureStrategyMixin<OUT>,
 				public EndStrategyMixin<IN>,
@@ -438,8 +438,8 @@ namespace flock {
 				return _terminalRule(LogicRules::Any);
 			}
 
-			static _sp<Rule> Eof() {
-				return _terminalRule(LogicRules::Eof);
+			static _sp<Rule> End() {
+				return _terminalRule(LogicRules::End);
 			}
 
 			// Collection Rules
