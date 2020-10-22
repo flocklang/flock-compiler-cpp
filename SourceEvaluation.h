@@ -124,7 +124,7 @@ namespace flock {
 			const static _sp<EvaluationMixins> evaluationMixins = make_shared<EvaluationMixins>();
 
 			static _sp<Strategies<Input, Output>> evaluationStrategies() {
-				_sp<HistoryStrategies<Input, Output, Key>> strategies = make_shared<HistoryStrategies<Input, Output, Key>>(evaluationMixins);
+				_sp<CachingStrategies<Input, Output, Key>> strategies = make_shared<CachingStrategies<Input, Output, Key>>(evaluationMixins);
 				addLogicStrategies<Input, Output>(evaluationMixins, strategies);
 
 				strategies->setStrategy(StringRules::EqualChar, make_shared<HasCharRuleStrategy>(evaluationMixins));

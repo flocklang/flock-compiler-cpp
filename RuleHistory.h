@@ -138,9 +138,9 @@ namespace flock {
 			/// <param name="input"></param>
 			/// <returns></returns>
 			template<typename IN, typename OUT, typename KEY = IN>
-			class RuleHistoryStrategy : public  WrappingRuleStrategy<IN, OUT> {
+			class CachingStrategy : public  WrappingRuleStrategy<IN, OUT> {
 			public:
-				RuleHistoryStrategy(_sp<RuleHistories<KEY, OUT>> histories, _sp<HistoryMixinsCombined<IN,OUT,KEY>> mixins, _sp<RuleStrategy <IN, OUT>> wrapped) : WrappingRuleStrategy<IN, OUT>(wrapped), histories(histories), mixins(mixins){}
+				CachingStrategy(_sp<RuleHistories<KEY, OUT>> histories, _sp<HistoryMixinsCombined<IN,OUT,KEY>> mixins, _sp<RuleStrategy <IN, OUT>> wrapped) : WrappingRuleStrategy<IN, OUT>(wrapped), histories(histories), mixins(mixins){}
 
 				virtual OUT accept(_sp<RuleVisitor<IN, OUT>> visitor, _sp<Rule> baseRule, IN input) override {
 					_sp<RuleHistory<const KEY, OUT>> ruleHistory = histories->getRecords(baseRule->id);
@@ -168,18 +168,18 @@ namespace flock {
 			};
 
 			template<typename IN, typename OUT, typename KEY = IN>
-			_sp<RuleHistoryStrategy<IN, OUT, KEY>> cacheResult(_sp<RuleHistories<KEY, OUT>> histories, _sp<HistoryMixinsCombined<IN, OUT, KEY>> mixins, _sp<RuleStrategy<IN, OUT>> strategy) {
-				return make_shared<RuleHistoryStrategy<IN, OUT, KEY>>(histories, mixins, strategy);
+			_sp<CachingStrategy<IN, OUT, KEY>> cacheResult(_sp<RuleHistories<KEY, OUT>> histories, _sp<HistoryMixinsCombined<IN, OUT, KEY>> mixins, _sp<RuleStrategy<IN, OUT>> strategy) {
+				return make_shared<CachingStrategy<IN, OUT, KEY>>(histories, mixins, strategy);
 			}
 
 			template<typename IN, typename OUT, typename KEY = IN>
-			class HistoryStrategies : public Strategies<IN,OUT> {
+			class CachingStrategies : public Strategies<IN,OUT> {
 			public:
-				HistoryStrategies(_sp<RuleHistories<KEY, OUT>> histories, _sp<HistoryMixinsCombined<IN, OUT, KEY>> mixins) : 
+				CachingStrategies(_sp<RuleHistories<KEY, OUT>> histories, _sp<HistoryMixinsCombined<IN, OUT, KEY>> mixins) : 
 					Strategies<IN,OUT>(), histories(histories), mixins(mixins){}
 
-				HistoryStrategies(_sp<HistoryMixinsCombined<IN, OUT, KEY>> mixins) : 
-					HistoryStrategies(make_shared<RuleHistories<KEY, OUT>>(), mixins) {}
+				CachingStrategies(_sp<HistoryMixinsCombined<IN, OUT, KEY>> mixins) : 
+					CachingStrategies(make_shared<RuleHistories<KEY, OUT>>(), mixins) {}
 
 				virtual void setStrategy(const int type, _sp<RuleStrategy<IN, OUT>> strategy) override {
 					Strategies<IN,OUT>::setStrategy(type, cacheResult<IN,OUT,KEY>(histories, mixins,strategy));
