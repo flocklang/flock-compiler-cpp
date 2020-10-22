@@ -60,7 +60,13 @@ namespace flock {
 					return make_pair(previousOutput, previousInput.second);
 				}
 				virtual Key getKeyForInput(Input input) override {
-					return input.first;
+					const int idx = input.first;
+					const Tokens tokens = input.second;
+					auto location = tokens->poll(idx);
+					if (location) {
+						return location->position;
+					}
+					return -1;
 				}
 			};
 
