@@ -43,6 +43,9 @@
     <Filter Include="Header Files\Rules\EBNF">
       <UniqueIdentifier>{b6bfa2b4-7406-487c-97f4-c833d15e2812}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Header Files\Rules\Evaluation">
+      <UniqueIdentifier>{4493dd25-644f-4e5e-b8b4-dd1c4e4ad7cd}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="FlockCompilerCpp.cpp">
@@ -134,6 +137,9 @@
     </ClInclude>
     <ClInclude Include="EBNFRulePrinter.h">
       <Filter>Header Files\Rules\EBNF</Filter>
+    </ClInclude>
+    <ClInclude Include="SourceEvaluation.h">
+      <Filter>Header Files\Rules\Evaluation</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

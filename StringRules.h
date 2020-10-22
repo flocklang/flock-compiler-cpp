@@ -28,35 +28,30 @@ namespace flock {
 		using namespace types;
 		namespace logic {
 			enum StringRules {
-				Eof = -101,
+				CharRange = -101,
 				EqualString = -102,
-				EqualChar = -103,
-				CharRange = -104
+				EqualChar = -103
 			};
 
-			
-			static _sp<Rule> Eof() {
-				return _terminalRule(StringRules::Eof);
-			}
-			static _sp<Rule> EqualString(string value) {
+			static _sp<Rule> r_EqualString(string value) {
 				return _valueRule<string>(StringRules::EqualString, value);
 			}
-			static _sp<Rule> EqualString(vector<string> values) {
+			static _sp<Rule> r_EqualString(vector<string> values) {
 				return _valueRule<string>(StringRules::EqualString, values);
 			}
-			static _sp<Rule> EqualString(initializer_list<string> values) {
+			static _sp<Rule> r_EqualString(initializer_list<string> values) {
 				return _valueRule<string>(StringRules::EqualString, values);
 			}
-			static _sp<Rule> EqualChar(int value) {
+			static _sp<Rule> r_EqualChar(int value) {
 				return _valueRule<int>(StringRules::EqualChar, value);
 			}
-			static _sp<Rule> EqualChar(vector<int> values) {
+			static _sp<Rule> r_EqualChar(vector<int> values) {
 				return _valueRule<int>(StringRules::EqualChar, values);
 			}
-			static _sp<Rule> EqualChar(initializer_list<int> values) {
+			static _sp<Rule> r_EqualChar(initializer_list<int> values) {
 				return _valueRule<int>(StringRules::EqualChar, values);
 			}
-			static _sp<Rule> CharRange(int start, int end) {
+			static _sp<Rule> r_CharRange(int start, int end) {
 				return _valueRule<int>(StringRules::CharRange, start, end);
 			}
 		}

@@ -1,24 +1,14 @@
 
 #include "Util.h"
 #include "Rules.h"
+#include "SourceEvaluation.h"
+#include <iostream>
+
+using namespace std;
 using namespace flock;
 using namespace flock::rule;
 using namespace flock::rule::types;
 
-enum RuleTypes {
-	// Terminals
-	Eof,
-	Any,
-	// Unary
-	AnyBut,
-	Repeat,
-	Optional,
-	// Collections
-	Sequence,
-	Or,
-	And,
-	XOr
-};
 
 struct BracketHints {
 	BracketHints(const bool parentBracketed = false, const int collectionType = -1) : parentBracketed(parentBracketed), collectionType(collectionType) {}
@@ -64,7 +54,7 @@ public:
 	PrintCollectionEval(const string seperator) : RuleStrategy(), seperator(seperator) {}
 	virtual string accept(_sp<PrintVisitor> visitor, _sp<Rule> baseRule, BracketHints bracketHints) override {
 		const auto rule = std::dynamic_pointer_cast<CollectionRule>(baseRule);
-		const int type = (RuleTypes)rule->type;
+		const int type = (LogicRules)rule->type;
 		const bool aCollection = rule->getChildren().size() > 1;
 		// if we have one or less children, we aren't grouping anything
 		// if the parent is bracketed, or the collection type is the same, its clearer not use to brackets
@@ -101,15 +91,15 @@ protected:
 	*/
 static Strategies<BracketHints, string> printStrategies() {
 	Strategies<BracketHints, string> strategies;
-	strategies.setStrategy(And, make_shared<PrintCollectionEval>(" & "));
-	strategies.setStrategy(Or, make_shared<PrintCollectionEval>(" | "));
-	strategies.setStrategy(XOr, make_shared<PrintCollectionEval>(" ^ "));
-	strategies.setStrategy(Sequence, make_shared<PrintCollectionEval>(", "));
-	strategies.setStrategy(Eof, make_shared<PrintTerminalEval>("? EOF ?"));
-	strategies.setStrategy(Any, make_shared<PrintTerminalEval>("? Any ?"));
-	strategies.setStrategy(AnyBut, make_shared<PrintUnaryEval>("-"));
-	strategies.setStrategy(Repeat, make_shared<PrintUnaryEval>("{", "}", true));
-	strategies.setStrategy(Optional, make_shared<PrintUnaryEval>("[", "]", false));
+	strategies.setStrategy(LogicRules::And, make_shared<PrintCollectionEval>(" & "));
+	strategies.setStrategy(LogicRules::Or, make_shared<PrintCollectionEval>(" | "));
+	strategies.setStrategy(LogicRules::XOr, make_shared<PrintCollectionEval>(" ^ "));
+	strategies.setStrategy(LogicRules::Sequence, make_shared<PrintCollectionEval>(", "));
+	strategies.setStrategy(LogicRules::End, make_shared<PrintTerminalEval>("? End ?"));
+	strategies.setStrategy(LogicRules::Any, make_shared<PrintTerminalEval>("? Any ?"));
+	strategies.setStrategy(LogicRules::AnyBut, make_shared<PrintUnaryEval>("-"));
+	strategies.setStrategy(LogicRules::Repeat, make_shared<PrintUnaryEval>("{", "}", true));
+	strategies.setStrategy(LogicRules::Optional, make_shared<PrintUnaryEval>("[", "]", false));
 	return strategies;
 }
 
@@ -118,11 +108,11 @@ static Strategies<BracketHints, string> printStrategies() {
 static string tryItOut() {
 	Strategies<BracketHints, string> strategies = printStrategies();
 	Library library;
-	auto any = make_shared <TerminalRule>(Any);
-	auto eof = make_shared <TerminalRule>(Eof);
-	_sp<Rule> OR = _collectionRule(Or, { any, eof });
-	_sp<Rule> REPEAT = make_shared<UnaryRule>(Repeat, OR);
-	_sp<Rule> COLL = _collectionRule(Sequence, { OR, REPEAT, any });
+	auto any = make_shared <TerminalRule>(LogicRules::Any);
+	auto eof = make_shared <TerminalRule>(LogicRules::End);
+	_sp<Rule> OR = _collectionRule(LogicRules::Or, { any, eof });
+	_sp<Rule> REPEAT = make_shared<UnaryRule>(LogicRules::Repeat, OR);
+	_sp<Rule> COLL = _collectionRule(LogicRules::Sequence, { OR, REPEAT, any });
 	library.setSymbol("myRule", COLL);
 	_sp< PrintVisitor>  visitor = make_shared<PrintVisitor>(make_shared<Library>(library), make_shared<Strategies<BracketHints, string>>(strategies));
 	return visitor->visit(COLL, BracketHints(true, -1));

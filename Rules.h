@@ -17,8 +17,6 @@
 #define FLOCK_COMPILER_RULES_H
 
 #include "Util.h"
-#include "LocationSupplier.h"
-#include "ConsoleFormat.h"
 #include "IDCounter.h"
 #include <memory>
 #include <vector>
@@ -109,7 +107,7 @@ namespace flock {
 			template<typename IN, typename OUT>
 			class Strategies {
 			public:
-
+				Strategies() {}
 				_sp<RuleStrategy<IN, OUT>> getStrategyById(const int typeId) {
 					auto it = strategyMap.find(typeId);
 					if (it == strategyMap.end()) {
@@ -122,7 +120,7 @@ namespace flock {
 					return getStrategyById(rule->type);
 				}
 
-				void setStrategy(const int type, _sp<RuleStrategy<IN, OUT>> strategy) {
+				virtual void setStrategy(const int type, _sp<RuleStrategy<IN, OUT>> strategy) {
 					strategyMap.emplace(type, strategy);
 				}
 			protected:
@@ -143,32 +141,39 @@ namespace flock {
 			/// <param name="input"></param>
 			/// <returns></returns>
 			template<typename IN, typename OUT>
-			class WrappingRuleStrategy : RuleStrategy <IN, OUT> {
-				WrappingRuleStrategy(_sp<RuleStrategy <IN, OUT>> wrapped) : wrapped(wrapped) {}
+			class WrappingRuleStrategy : public RuleStrategy <IN, OUT> {
 			public:
-				virtual OUT accept(_sp<RuleVisitor<IN, OUT>> visitor, _sp<Rule> baseRule, IN input) override {
-					IN newInput = before(visitor, baseRule, input);
-					OUT wrappedOutput = wrapped->accept(visitor, baseRule, newInput);
-					return after(visitor, baseRule, input, newInput, wrappedOutput);
-				}
-				/// <summary>
-				/// if you don't want too do anything, simply implement by
-				/// return input;
-				/// </summary>
-				/// <returns></returns>
-				virtual IN before(_sp<RuleVisitor<IN, OUT>> visitor, _sp<Rule> baseRule, IN input) = 0;
-				/// <summary>
-				/// if you don't want too do anything, simply implement by
-				/// return wrappedOutput;
-				/// </summary>
-				/// <returns></returns>
-				virtual OUT after(_sp<RuleVisitor<IN, OUT>> visitor, _sp<Rule> baseRule, IN originalInput, IN wrappedInput, OUT wrappedOutput) = 0;
-
+				WrappingRuleStrategy(_sp<RuleStrategy <IN, OUT>> wrapped) : wrapped(wrapped) {}
+				
 				_sp<RuleStrategy <IN, OUT>> getWrapped() {
 					return wrapped;
 				}
 			protected:
 				_sp<RuleStrategy <IN, OUT>> wrapped;
+			};
+			
+
+			/// <summary>
+			/// Helper class to save on the typing.
+			/// </summary>
+			/// <typeparam name="IN"></typeparam>
+			/// <typeparam name="OUT"></typeparam>
+			template<typename IN, typename OUT>
+			class BaseMixinsCombined {
+			public:
+				virtual bool isFailure(OUT out) = 0;
+				virtual OUT makeFailure() = 0;
+				virtual OUT makeSuccess(IN input) = 0;
+				virtual OUT makeEmptySuccess(IN input) = 0;
+				virtual bool isEnd(IN input) = 0;
+			};
+
+			template<typename IN, typename OUT, typename MIX = BaseMixinsCombined<IN,OUT>>
+			class MixinsRuleStrategy : public RuleStrategy<IN, OUT> {
+			public:
+				MixinsRuleStrategy(const _sp<MIX> mixins) : mixins(mixins) {}
+			protected:
+				const _sp<MIX> mixins; //ish
 			};
 
 			/// <summary>
@@ -260,6 +265,30 @@ namespace flock {
 				}
 			protected:
 				vector<T> values;
+			};
+
+			template<typename T, typename IN, typename OUT>
+			class HasValueRuleStrategy : public MixinsRuleStrategy<IN, OUT> {
+			public:
+				HasValueRuleStrategy(_sp<BaseMixinsCombined<IN, OUT>> mixins) : MixinsRuleStrategy<IN, OUT>(mixins) {}
+
+				virtual OUT accept(const _sp<RuleVisitor<IN, OUT>> visitor, const _sp<Rule> baseRule, const IN input) override {
+					if (mixins->isEnd(input)) {
+						return mixins->makeFailure();
+					}
+					const auto rule = std::dynamic_pointer_cast<ValuesRule<T>>(baseRule);
+					vector<T> values = rule->getValues();
+
+					for (T value : values) {
+						OUT match = matches(value, input);
+						if(!mixins->isFailure(match)) {
+							return match;
+						}
+					}
+					return mixins->makeFailure(); // return failure.
+				}
+
+				virtual OUT matches(T value, IN input) = 0;
 			};
 
 			static _sp<CollectionRule> _collectionRule(const int type, _sp_vec<Rule> rules) {

@@ -32,6 +32,10 @@ namespace flock {
 
             virtual R pollRange(const int amount = 1, const int startIdx = 0) = 0;
 
+            bool isEnd(int idx) {
+                return poll(idx) == nullptr;
+            }
+
             _sp<Contents> poll(const int idx = 0) {
                 for (int i = store.size(); i <= idx; i++) {
                     auto value = this->supply();
