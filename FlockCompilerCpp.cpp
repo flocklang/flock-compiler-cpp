@@ -20,6 +20,7 @@
 
 #include <iostream>
 #include <string>
+#include "ConsoleFormat.h"
 #include "LocationSupplier.h"
 #include "ConsoleCharSupplier.h"
 #include "FlockGrammar.h"
@@ -27,7 +28,7 @@
 using namespace std;
 using namespace flock;
 using namespace flock::supplier;
-using namespace flock::ebnf;
+using namespace flock::colour;
 
 
 
@@ -37,7 +38,7 @@ static void MainLoop( _sp<types::Library> library) {
 
 	std::cout << colourize(Colour::DARK_CYAN, "\nready> ");
 	while (true) {
-		std::pair<string, _sp<types::SyntaxNode>> ret = types::evaluateAgainstAllRules(locationSupplier, library);
+		/*std::pair<string, _sp<types::SyntaxNode>> ret = types::evaluateAgainstAllRules(locationSupplier, library);
 
 		string ruleName = get<0>(ret);
 		if (ruleName.empty() || ruleName == "eof") {
@@ -52,15 +53,15 @@ static void MainLoop( _sp<types::Library> library) {
 				std::cout << " " << *(syntaxNode->getRange());
 			}
 			std::cout << "\n";
-		}
+		}*/
 	}
 }
 
 int main2()
 {
-	 _sp<types::Library> library = std::make_shared<types::Library>(grammar::createFlockLibrary());
+	/*  _sp<types::Library> library = std::make_shared<types::Library>(grammar::createFlockLibrary());
 	std::cout << colourize(Colour::YELLOW, "==== Hello Flock ====\n\n") << *library;
-	MainLoop(library);
+	MainLoop(library);*/
 	return 0;
 }
 

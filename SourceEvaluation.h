@@ -29,9 +29,8 @@ namespace flock {
 	namespace rule {
 		using namespace std;
 		using namespace flock::rule::types;
-		using namespace flock::rule::logic;
 		using namespace flock::rule::history;
-		namespace evaluation {
+		namespace evaluator {
 			using Tokens = _sp<supplier::CachedSupplier<Location, _sp<Range>>>;
 			using Input = pair<int, Tokens>;
 			using Output = int;
@@ -127,10 +126,39 @@ namespace flock {
 
 			};
 
+			class EvaluationLibraryStrategy : public LibraryStrategy<Input, Output> {
+			public:
+				virtual Output accept(const _sp<RuleVisitor<Input, Output>> visitor, _sp<Library> library, Input input) override {
+					vector<string> * symbolNames = library->getSymbolNames();
+					vector<string> * partNames = library->getPartNames();
+					Output out = -1;
+					string name = "";
+					for (auto rule = symbolNames->begin(); rule != symbolNames->end(); ++rule) {
+						Output newOut = visitor->visit(*rule, input);
+						if (newOut > out) {
+							name = "" + *rule;
+							out = newOut;
+						}
+					}
+					for (auto rule = partNames->begin(); rule != partNames->end(); ++rule) {
+						Output newOut = visitor->visit(*rule, input);
+						if (newOut > out) {
+							name = "" + *rule;
+							out = newOut;
+						}
+					}
+					return out; // return the first as a success
+				};
+				virtual Output accept(const _sp<RuleVisitor<Input, Output>> visitor, _sp<Library> library) override {
+					return -1; // maybe setup console or something later.
+				}
+			};
+
 			const static _sp<EvaluationMixins> evaluationMixins = make_shared<EvaluationMixins>();
 
 			static _sp<Strategies<Input, Output>> evaluationStrategies() {
-				_sp<CachingStrategies<Input, Output, Key>> strategies = make_shared<CachingStrategies<Input, Output, Key>>(evaluationMixins);
+				_sp<LibraryStrategy<Input, Output>> libraryStrategy = make_shared<EvaluationLibraryStrategy>();
+				_sp<CachingStrategies<Input, Output, Key>> strategies = make_shared<CachingStrategies<Input, Output, Key>>(libraryStrategy, evaluationMixins);
 				addLogicStrategies<Input, Output>(evaluationMixins, strategies);
 
 				strategies->setStrategy(StringRules::EqualChar, make_shared<HasCharRuleStrategy>(evaluationMixins));

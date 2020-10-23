@@ -168,7 +168,7 @@
     <ClInclude Include="ConsoleCharSupplier.h" />
     <ClInclude Include="CompilerFix.h" />
     <ClInclude Include="ConsoleFormat.h" />
-    <ClInclude Include="EBNFRulePrinter.h" />
+    <ClInclude Include="EBNFPrinter.h" />
     <ClInclude Include="FileCharSupplier.h" />
     <ClInclude Include="FlockGrammar.h" />
     <ClInclude Include="IDCounter.h" />

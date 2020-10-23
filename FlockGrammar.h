@@ -15,7 +15,9 @@
  */
 #ifndef FLOCK_COMPILER_FLOCK_GRAMMAR_H
 #define FLOCK_COMPILER_FLOCK_GRAMMAR_H
-#include "RuleFunctions.h"
+#include "Rules.h"
+#include "LogicRules.h"
+#include "StringRules.h"
 #include "Util.h"
 
 
@@ -25,43 +27,44 @@
 using namespace std;
 namespace flock {
 	using namespace source;
-	using namespace ebnf;
+	using namespace rule;
+	using namespace rule;
 	namespace grammar {
 		using R = _sp<types::Rule>;
 		static types::Library createFlockLibrary() {
 			types::Library library;
 
-			library.part("eof", rule::eof());
-			library.part("newline", rule::new_line());
-			library.part("blank", rule::blank());
-			library.part("whitespace", rule::OR(rule::RULE("blank"), rule::RULE("newline")));
-			library.part("digit", rule::digit());
-			library.part("alpha", rule::alpha());
-			library.part("lineEnd", rule::REP(rule::SEQ(rule::RULE("blank*"), rule::OR(rule::RULE("newline"), rule::EQ(';')) ),1,0));
-			library.part("alphanum", rule::OR(rule::RULE("alpha"), rule::RULE("digit")));
-			library.rule("integer", rule::RULE("digit+"));
-			library.rule("decimal", { rule::RULE("digit+"), rule::EQ('.'), rule::RULE("digit+"), rule::NOT({rule::EQ('.'), rule::RULE("digit+")}) });
+			library.addPart("eof", rule::END());
+			library.addPart("newline", rule::NEW_LINE());
+			library.addPart("blank", rule::BLANK());
+			library.addPart("whitespace", rule::OR(rule::RULE("blank"), rule::RULE("newline")));
+			library.addPart("digit", rule::digit());
+			library.addPart("alpha", rule::alpha());
+			library.addPart("lineEnd", rule::REP(1, 0,rule::SEQ(rule::RULE("blank*"), rule::OR(rule::RULE("newline"), rule::EQ(';')) )));
+			library.addPart("alphanum", rule::OR(rule::RULE("alpha"), rule::RULE("digit")));
+			library.addPart("integer", rule::RULE("digit+"));
+			library.addPart("decimal", rule::SEQ({ rule::RULE("digit+"), rule::EQ('.'), rule::RULE("digit+"), rule::NOT({rule::EQ('.'), rule::RULE("digit+")}) }));
 
 			// identifierEnd ::= alpha | number | '_' | '$'
 			R identifierEnd = rule::OR(rule::RULE("alphanum"), rule::EQ({ '_', '$' }));
 			// identifierBegin ::= alpha | ( '_',  identifierEnd)
 			R identifierBegin = rule::OR( rule::RULE("alpha") , rule::SEQ(rule::EQ('_') , identifierEnd));
 			/// identifier ::= identifierBegin, {identifierEnd}
-			library.rule("identifier", rule::SEQ(identifierBegin , rule::REP(identifierEnd)));
+			library.addSymbol("identifier", rule::SEQ(identifierBegin , rule::REP(identifierEnd)));
 
-			library.rule("number", rule::OR(rule::RULE("decimal") ,rule::RULE("integer")));
+			library.addSymbol("number", rule::OR(rule::RULE("decimal") ,rule::RULE("integer")));
 			// we capture escapes as we go through.
-			library.rule("string", { rule::EQ('"') , rule::REP(rule::OR(rule::SEQ(rule::EQ('\\'), rule::ANY()), rule::ANYBUT(rule::EQ('"')))), rule::EQ('"') });
-			library.rule("comment", { rule::EQ('/'), rule::OR(rule::SEQ(rule::EQ('/'),  rule::SYM("contents", rule::UNTIL(rule::new_line()))),rule::SEQ(rule::EQ('*'), rule::SYM("contents",rule::UNTIL(rule::EQ("*/"))), rule::EQ("*/")))});
-			library.rule("alias", { rule::RULE("identifier"),
+			library.addSymbol("string", rule::SEQ({ rule::EQ('"') , rule::REP(rule::OR(rule::SEQ(rule::EQ('\\'), rule::ANY()), rule::BUT(rule::EQ('"')))), rule::EQ('"') }));
+			library.addSymbol("comment", rule::SEQ({ rule::EQ('/'), rule::OR(rule::SEQ(rule::EQ('/'),   rule::UNTIL(rule::NEW_LINE())),rule::SEQ({rule::EQ('*'), rule::UNTIL(rule::EQ("*/")), rule::EQ("*/")})) }));
+			library.addSymbol("alias", rule::SEQ({ rule::RULE("identifier"),
 				rule::OPT({
 					rule::RULE("whitespace*"),
 					rule::EQ('='),
 					rule::RULE("whitespace*"),
 					rule::RULE("identifier") })
-				});
+				}));
 
-			library.rule("aliasList", rule::OR({ rule::SEQ({rule::RULE("alias"), rule::REP(rule::SEQ({rule::RULE("whitespace*"),
+			library.addSymbol("aliasList", rule::OR({ rule::SEQ({rule::RULE("alias"), rule::REP(rule::SEQ({rule::RULE("whitespace*"),
 						rule::EQ(','),
 						rule::RULE("whitespace*"),
 						rule::RULE("aliasList"),
@@ -78,7 +81,7 @@ namespace flock {
 					rule::EQ(')')
 					}) 
 				}));
-			library.rule("use", rule::SEQ({ rule::keyword("use") , rule::RULE("whitespace*") , rule::OPT(rule::RULE("aliasList")), rule::RULE("lineEnd")}));
+			library.addSymbol("use", rule::SEQ({ rule::EQ("use") , rule::RULE("whitespace*") , rule::OPT(rule::RULE("aliasList")), rule::RULE("lineEnd")}));
 			return library;
 		};
 		

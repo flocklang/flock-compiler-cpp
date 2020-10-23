@@ -49,6 +49,8 @@ namespace flock {
 
 			template<typename IN, typename OUT>
 			class RuleStrategy;
+			template<typename IN, typename OUT>
+			class LibraryStrategy;
 
 			template<typename IN, typename OUT>
 			class RuleVisitor;
@@ -71,14 +73,18 @@ namespace flock {
 
 			class Library {
 			public:
-				_sp <Rule> setPart(const string partName, _sp <Rule> expression) {
+				_sp <Rule> addPart(const string partName, _sp <Rule> expression) {
 					parts.emplace(partName, expression);
+					partNames.push_back(partName);
 					return expression;
 				}
-				_sp <Rule> setSymbol(const string symbolName, _sp <Rule> expression) {
+
+				_sp <Rule> addSymbol(const string symbolName, _sp <Rule> expression) {
 					symbols.emplace(symbolName, expression);
+					symbolNames.push_back(symbolName);
 					return expression;
 				}
+
 
 				_sp<Rule> getRule(const string name) {
 					// hoping elvis operators work (apparently not standard c++, so doing it the longer way)
@@ -99,7 +105,15 @@ namespace flock {
 					}
 					return it->second;
 				}
+				vector<string> * getSymbolNames() {
+					return &symbolNames;
+				}
+				vector<string> * getPartNames() {
+					return &partNames;
+				}
 			protected:
+				vector<string> symbolNames;
+				vector<string> partNames;
 				RuleMap symbols;
 				RuleMap parts;
 			};
@@ -107,7 +121,7 @@ namespace flock {
 			template<typename IN, typename OUT>
 			class Strategies {
 			public:
-				Strategies() {}
+				Strategies(_sp<LibraryStrategy<IN, OUT>> libraryStrategy) : libraryStrategy(libraryStrategy) {}
 				_sp<RuleStrategy<IN, OUT>> getStrategyById(const int typeId) {
 					auto it = strategyMap.find(typeId);
 					if (it == strategyMap.end()) {
@@ -123,8 +137,13 @@ namespace flock {
 				virtual void setStrategy(const int type, _sp<RuleStrategy<IN, OUT>> strategy) {
 					strategyMap.emplace(type, strategy);
 				}
+
+				_sp<LibraryStrategy<IN, OUT>> getLibraryStrategy() {
+					return libraryStrategy;
+				}
 			protected:
 				map<int, _sp<RuleStrategy<IN, OUT>>> strategyMap;
+				_sp<LibraryStrategy<IN, OUT>> libraryStrategy;
 			};
 
 			template<typename IN, typename OUT>
@@ -132,6 +151,14 @@ namespace flock {
 			public:
 				virtual ~RuleStrategy() = default;
 				virtual OUT accept(_sp<RuleVisitor<IN, OUT>> visitor, _sp<Rule> rule, IN input) = 0;
+			};
+
+			template<typename IN, typename OUT>
+			class LibraryStrategy {
+			public:
+				virtual ~LibraryStrategy() = default;
+				virtual OUT accept(_sp<RuleVisitor<IN, OUT>> visitor, _sp<Library> library, IN input) = 0;
+				virtual OUT accept(_sp<RuleVisitor<IN, OUT>> visitor, _sp<Library> library) = 0;
 			};
 
 			/// <summary>
@@ -195,6 +222,16 @@ namespace flock {
 					_sp<Rule> rule = getRule(alias);
 					auto strategy = strategies->getStrategy(rule);
 					return strategy->accept(this->shared_from_this(), rule, input);
+				}
+
+				OUT begin(IN input) {
+					auto strategy = strategies->getLibraryStrategy();
+					return strategy->accept(this->shared_from_this(), library, input);
+				}
+
+				OUT begin() {
+					auto strategy = strategies->getLibraryStrategy();
+					return strategy->accept(this->shared_from_this(), library);
 				}
 
 				// delegates for shorthandedness.
@@ -323,6 +360,7 @@ namespace flock {
 			static _sp<ValuesRule<T>> _valueRule(int type, T value1, T value2) {
 				return _valueRule(type, { value1, value2 });
 			}
+
 		}
 
 	}

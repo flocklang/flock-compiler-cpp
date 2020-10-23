@@ -73,6 +73,12 @@ namespace flock {
 		static string colourize(Colour colour, int value) {
 			return COLOURS[static_cast<int>(colour)] + (char)value + COLOUR_END;
 		}
+		static string colourStart(Colour colour) {
+			return COLOURS[static_cast<int>(colour)];
+		}
+		static string colourEnd() {
+			return COLOUR_END;
+		}
 #endif
 	}
 }

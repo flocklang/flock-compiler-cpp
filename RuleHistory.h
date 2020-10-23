@@ -175,11 +175,11 @@ namespace flock {
 			template<typename IN, typename OUT, typename KEY = IN>
 			class CachingStrategies : public Strategies<IN,OUT> {
 			public:
-				CachingStrategies(_sp<RuleHistories<KEY, OUT>> histories, _sp<HistoryMixinsCombined<IN, OUT, KEY>> mixins) : 
-					Strategies<IN,OUT>(), histories(histories), mixins(mixins){}
+				CachingStrategies(_sp<LibraryStrategy<IN, OUT>> libraryStrategy, _sp<RuleHistories<KEY, OUT>> histories, _sp<HistoryMixinsCombined<IN, OUT, KEY>> mixins) :
+					Strategies<IN,OUT>(libraryStrategy), histories(histories), mixins(mixins){}
 
-				CachingStrategies(_sp<HistoryMixinsCombined<IN, OUT, KEY>> mixins) : 
-					CachingStrategies(make_shared<RuleHistories<KEY, OUT>>(), mixins) {}
+				CachingStrategies(_sp<LibraryStrategy<IN, OUT>> libraryStrategy, _sp<HistoryMixinsCombined<IN, OUT, KEY>> mixins) :
+					CachingStrategies(libraryStrategy, make_shared<RuleHistories<KEY, OUT>>(), mixins) {}
 
 				virtual void setStrategy(const int type, _sp<RuleStrategy<IN, OUT>> strategy) override {
 					Strategies<IN,OUT>::setStrategy(type, cacheResult<IN,OUT,KEY>(histories, mixins,strategy));

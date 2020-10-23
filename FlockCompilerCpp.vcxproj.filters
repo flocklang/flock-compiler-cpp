@@ -40,11 +40,11 @@
     <Filter Include="Header Files\Rules">
       <UniqueIdentifier>{c5130bae-e72d-4218-a881-bce8dd1c35e6}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Header Files\Rules\EBNF">
-      <UniqueIdentifier>{b6bfa2b4-7406-487c-97f4-c833d15e2812}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Header Files\Rules\Evaluation">
       <UniqueIdentifier>{4493dd25-644f-4e5e-b8b4-dd1c4e4ad7cd}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Rules\FBNF">
+      <UniqueIdentifier>{b6bfa2b4-7406-487c-97f4-c833d15e2812}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -135,11 +135,11 @@
     <ClInclude Include="RuleHistory.h">
       <Filter>Header Files\Rules</Filter>
     </ClInclude>
-    <ClInclude Include="EBNFRulePrinter.h">
-      <Filter>Header Files\Rules\EBNF</Filter>
-    </ClInclude>
     <ClInclude Include="SourceEvaluation.h">
       <Filter>Header Files\Rules\Evaluation</Filter>
+    </ClInclude>
+    <ClInclude Include="EBNFPrinter.h">
+      <Filter>Header Files\Rules\FBNF</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
