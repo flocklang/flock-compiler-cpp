@@ -37,7 +37,7 @@ namespace flock {
 			using Key = int;
 			const static int FAILURE = -1;
 
-			class EvaluationMixins : public LogicMixinsCombined<Input, Output>, public HistoryMixinsCombined<Input, Output, Key>, public BaseMixinsCombined<Input, Output> {
+			class EvaluationMixins : public BaseMixinsCombined<Input, Output>, public LogicMixinsCombined<Input, Output>, public HistoryMixinsCombined<Input, Output, Key> {
 			public:
 				virtual bool isFailure(Output out) override {
 					return out == FAILURE;

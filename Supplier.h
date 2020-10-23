@@ -24,6 +24,7 @@ namespace flock {
         class Supplier
         {
         public:
+            virtual ~Supplier() = default;
             virtual Contents supply() = 0;
         };
     }

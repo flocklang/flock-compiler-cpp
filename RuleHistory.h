@@ -157,7 +157,7 @@ namespace flock {
 						return mixins->makeFailure();
 					}
 					record->setProcessing();
-					OUT output = wrapped->accept(visitor, baseRule, input);
+					OUT output = this->wrapped->accept(visitor, baseRule, input);
 					record->setCompleted(output);
 					return output;
 				}

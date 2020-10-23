@@ -108,7 +108,6 @@ namespace flock {
 				virtual string getValue(string value) override {
 					string collect;
 					bool startOfGraph = true;
-					bool endOfGraph = false;
 					for (char const& ch : value) {
 						if (startOfGraph) {
 							if (isgraph(ch)  || ch == ' ') {

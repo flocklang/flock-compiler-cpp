@@ -124,13 +124,13 @@ namespace flock {
 				const auto children = rule->getChildren();
 
 				const OUT firstOut = visitor->visit(children.at(0), input);
-				if (mixins->isFailure(firstOut)) {
-					return mixins->makeFailure(); // return as a failure
+				if (this->mixins->isFailure(firstOut)) {
+					return this->mixins->makeFailure(); // return as a failure
 				}
 				for (auto rule = begin(children) + 1; rule != end(children); ++rule) {
 					const OUT nextOut = visitor->visit((*rule), input);
-					if (mixins->isFailure(nextOut)) {
-						return mixins->makeFailure(); // return as a failure
+					if (this->mixins->isFailure(nextOut)) {
+						return this->mixins->makeFailure(); // return as a failure
 					}
 				}
 				return firstOut; // return the first as a success
@@ -147,16 +147,16 @@ namespace flock {
 				const auto children = rule->getChildren();
 
 				const OUT firstOut = visitor->visit(children.at(0), input);
-				if (!mixins->isFailure(firstOut)) {
+				if (!this->mixins->isFailure(firstOut)) {
 					return firstOut; // return as a success
 				}
 				for (auto rule = begin(children) + 1; rule != end(children); ++rule) {
 					const OUT nextOut = visitor->visit((*rule), input);
-					if (!mixins->isFailure(nextOut)) {
+					if (!this->mixins->isFailure(nextOut)) {
 						return nextOut; // return as a success
 					}
 				}
-				return mixins->makeFailure(); // return the first as a failure
+				return this->mixins->makeFailure(); // return the first as a failure
 			}
 		};
 
@@ -171,16 +171,16 @@ namespace flock {
 
 				OUT successOut = visitor->visit(children.at(0), input);
 
-				bool isFailure = mixins->isFailure(successOut);
+				bool isFailure = this->mixins->isFailure(successOut);
 				for (auto rule = begin(children) + 1; rule != end(children); ++rule) {
 					const OUT nextOut = visitor->visit((*rule), input);
-					if (!mixins->isFailure(nextOut)) {
+					if (!this->mixins->isFailure(nextOut)) {
 						if (isFailure) {
 							successOut = nextOut;
 							isFailure = false;
 						}
 						else {
-							return mixins->makeFailure(); // only one success allowed.
+							return this->mixins->makeFailure(); // only one success allowed.
 						}
 						return nextOut; // return as a success
 					}
@@ -201,14 +201,14 @@ namespace flock {
 
 				IN currentInput = input;
 				OUT currentOut = visitor->visit(children.at(0), currentInput);
-				if (mixins->isFailure(currentOut)) {
-					return mixins->makeFailure(); // is a failure
+				if (this->mixins->isFailure(currentOut)) {
+					return this->mixins->makeFailure(); // is a failure
 				}
 				for (auto rule = begin(children) + 1; rule != end(children); ++rule) {
-					currentInput = mixins->nextInFromPrevious(currentInput, currentOut);
+					currentInput = this->mixins->nextInFromPrevious(currentInput, currentOut);
 					currentOut = visitor->visit((*rule), currentInput);
-					if (mixins->isFailure(currentOut)) {
-						return mixins->makeFailure(); // is a failure
+					if (this->mixins->isFailure(currentOut)) {
+						return this->mixins->makeFailure(); // is a failure
 					}
 				}
 				return currentOut; // return the combined as a success.
@@ -225,8 +225,8 @@ namespace flock {
 				const auto child = rule->getChild();
 
 				const OUT currentOut = visitor->visit(child, input);
-				if (mixins->isFailure(currentOut)) {
-					return mixins->makeSuccess(input); // is a success
+				if (this->mixins->isFailure(currentOut)) {
+					return this->mixins->makeSuccess(input); // is a success
 				}
 
 				return currentOut; // return the evaluated success.
@@ -243,11 +243,11 @@ namespace flock {
 				const auto child = rule->getChild();
 
 				const OUT currentOut = visitor->visit(child, input);
-				if (mixins->isFailure(currentOut)) {
-					return mixins->makeEmptySuccess(input); // is a success, but don't move forward.
+				if (this->mixins->isFailure(currentOut)) {
+					return this->mixins->makeEmptySuccess(input); // is a success, but don't move forward.
 				}
 
-				return mixins->makeFailure(); // return failure.
+				return this->mixins->makeFailure(); // return failure.
 			}
 		};
 
@@ -264,35 +264,35 @@ namespace flock {
 
 				IN currentIn = input;
 				OUT currentOut = visitor->visit(child, currentIn);
-				if (mixins->isFailure(currentOut) && min > 0) {
-					return mixins->makeFailure();
+				if (this->mixins->isFailure(currentOut) && min > 0) {
+					return this->mixins->makeFailure();
 				}
 
 				for (int i = 1; i < min; i++) {
-					currentIn = mixins->nextInFromPrevious(currentIn, currentOut);
+					currentIn = this->mixins->nextInFromPrevious(currentIn, currentOut);
 					currentOut = visitor->visit(child, currentIn);
-					if (mixins->isFailure(currentOut)) {
-						return mixins->makeFailure();
+					if (this->mixins->isFailure(currentOut)) {
+						return this->mixins->makeFailure();
 					}
 				}
 				if (max > 0) {
 					for (int i = min; i < max + 1; i++) {
-						currentIn = mixins->nextInFromPrevious(currentIn, currentOut);
+						currentIn = this->mixins->nextInFromPrevious(currentIn, currentOut);
 						const OUT nextOut = visitor->visit(child, currentIn);
 
-						if (mixins->isFailure(nextOut)) {
+						if (this->mixins->isFailure(nextOut)) {
 							return currentOut;
 						}
 						currentOut = nextOut;
 					}
 					// we have gone past the maximum
-					return mixins->makeFailure();
+					return this->mixins->makeFailure();
 				}
 				else {
 					while (true) {
-						currentIn = mixins->nextInFromPrevious(currentIn, currentOut);
+						currentIn = this->mixins->nextInFromPrevious(currentIn, currentOut);
 						const OUT nextOut = visitor->visit(child, currentIn);
-						if (mixins->isFailure(nextOut)) {
+						if (this->mixins->isFailure(nextOut)) {
 							return currentOut;
 						}
 						currentOut = nextOut;
@@ -308,10 +308,10 @@ namespace flock {
 			AnyRuleStrategy(const _sp<LogicMixinsCombined<IN, OUT>> mixins) : LogicRuleStrategy<IN, OUT>(mixins) {}
 
 			virtual OUT accept(_sp<RuleVisitor<IN, OUT>> visitor, _sp<Rule> rule, IN input) override {
-				if (mixins->isEnd(input)) {
-					return mixins->makeFailure();
+				if (this->mixins->isEnd(input)) {
+					return this->mixins->makeFailure();
 				}
-				return mixins->makeSuccess(input);
+				return this->mixins->makeSuccess(input);
 			}
 		};
 
@@ -323,10 +323,10 @@ namespace flock {
 			EndRuleStrategy(_sp<LogicMixinsCombined<IN, OUT>> mixins) : LogicRuleStrategy<IN, OUT>(mixins) {}
 
 			virtual OUT accept(_sp<RuleVisitor<IN, OUT>> visitor, _sp<Rule> rule, IN input) override {
-				if (mixins->isEnd(input)) {
-					return mixins->makeEmptySuccess(input); // success but no point moving forwards.
+				if (this->mixins->isEnd(input)) {
+					return this->mixins->makeEmptySuccess(input); // success but no point moving forwards.
 				}
-				return mixins->makeFailure();
+				return this->mixins->makeFailure();
 			}
 		};
 
@@ -341,14 +341,14 @@ namespace flock {
 				const auto child = rule->getChild();
 
 				const OUT currentOut = visitor->visit(child, input);
-				if (mixins->isFailure(currentOut)) {
-					if (mixins->isEnd(input)) {
-						return mixins->makeFailure();
+				if (this->mixins->isFailure(currentOut)) {
+					if (this->mixins->isEnd(input)) {
+						return this->mixins->makeFailure();
 					}
-					return mixins->makeSuccess(input); // is a success
+					return this->mixins->makeSuccess(input); // is a success
 				}
 
-				return mixins->makeFailure(); // return failure.
+				return this->mixins->makeFailure(); // return failure.
 			}
 		};
 

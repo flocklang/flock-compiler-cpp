@@ -121,6 +121,7 @@ namespace flock {
 			template<typename IN, typename OUT>
 			class Strategies {
 			public:
+				virtual ~Strategies() = default;
 				Strategies(_sp<LibraryStrategy<IN, OUT>> libraryStrategy) : libraryStrategy(libraryStrategy) {}
 				_sp<RuleStrategy<IN, OUT>> getStrategyById(const int typeId) {
 					auto it = strategyMap.find(typeId);
@@ -188,6 +189,7 @@ namespace flock {
 			template<typename IN, typename OUT>
 			class BaseMixinsCombined {
 			public:
+				virtual ~BaseMixinsCombined() = default;
 				virtual bool isFailure(OUT out) = 0;
 				virtual OUT makeFailure() = 0;
 				virtual OUT makeSuccess(IN input) = 0;
@@ -310,19 +312,19 @@ namespace flock {
 				HasValueRuleStrategy(_sp<BaseMixinsCombined<IN, OUT>> mixins) : MixinsRuleStrategy<IN, OUT>(mixins) {}
 
 				virtual OUT accept(const _sp<RuleVisitor<IN, OUT>> visitor, const _sp<Rule> baseRule, const IN input) override {
-					if (mixins->isEnd(input)) {
-						return mixins->makeFailure();
+					if (this->mixins->isEnd(input)) {
+						return this->mixins->makeFailure();
 					}
 					const auto rule = std::dynamic_pointer_cast<ValuesRule<T>>(baseRule);
 					vector<T> values = rule->getValues();
 
 					for (T value : values) {
 						OUT match = matches(value, input);
-						if(!mixins->isFailure(match)) {
+						if(!this->mixins->isFailure(match)) {
 							return match;
 						}
 					}
-					return mixins->makeFailure(); // return failure.
+					return this->mixins->makeFailure(); // return failure.
 				}
 
 				virtual OUT matches(T value, IN input) = 0;
