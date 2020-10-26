@@ -21,6 +21,7 @@
 #include <string>
 
 namespace flock {
+	using namespace std;
 	namespace supplier {
 		class ConsoleCharSupplier : public Supplier <int> {
 		public:

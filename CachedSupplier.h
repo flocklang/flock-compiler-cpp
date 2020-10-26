@@ -37,6 +37,9 @@ namespace flock {
             }
 
             _sp<Contents> poll(const int idx = 0) {
+                if (idx < 0) {
+                    return nullptr;
+                }
                 for (int i = store.size(); i <= idx; i++) {
                     auto value = this->supply();
                     if (!value) {

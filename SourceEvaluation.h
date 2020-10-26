@@ -31,13 +31,16 @@ namespace flock {
 		using namespace flock::rule::types;
 		using namespace flock::rule::history;
 		namespace evaluator {
+			class SyntaxNode;
 			using Tokens = _sp<supplier::CachedSupplier<Location, _sp<Range>>>;
 			using Input = pair<int, Tokens>;
-			using Output = int;
+			using Output = pair<int, _sp<SyntaxNode>>;
+			using Store = Output;
+			using EvaluationVisitor = RuleVisitor<Input, Output>;
 			using Key = int;
-			const static int FAILURE = -1;
+			const static Output FAILURE = make_pair(-1, nullptr);
 
-			class EvaluationMixins : public BaseMixinsCombined<Input, Output>, public LogicMixinsCombined<Input, Output>, public HistoryMixinsCombined<Input, Output, Key> {
+			class EvaluationMixins : public BaseMixinsCombined<Input, Output>, public LogicMixinsCombined<Input, Output>, public HistoryMixinsCombined<Input, Output, Key, Store> {
 			public:
 				virtual bool isFailure(Output out) override {
 					return out == FAILURE;
@@ -46,17 +49,17 @@ namespace flock {
 					return FAILURE;
 				}
 				virtual Output makeSuccess(Input input) override {
-					return input.first + 1;
+					return make_pair(input.first + 1, nullptr);
 				}
 				virtual Output makeEmptySuccess(Input input) override {
-					return input.first;
+					return make_pair(input.first, nullptr);
 				}
 				virtual bool isEnd(Input input) override {
 					Tokens tokens = input.second;
 					return tokens->isEnd(input.first);
 				}
 				virtual Input nextInFromPrevious(Input previousInput, Output previousOutput) override {
-					return make_pair(previousOutput, previousInput.second);
+					return make_pair(previousOutput.first, previousInput.second);
 				}
 				virtual Key getKeyForInput(Input input) override {
 					const int idx = input.first;
@@ -67,19 +70,26 @@ namespace flock {
 					}
 					return -1;
 				}
+
+				virtual Output getOutFromStorage(Store store) override {
+					return store;
+				}
+				virtual Store getStorageFromOut(_sp<RuleVisitor<Input, Output>> baseVisitor, Input input, Output output) override {
+					return output;
+				}
 			};
 
 
 			class HasCharRuleStrategy : public HasValueRuleStrategy<int, Input, Output> {
 			public:
-				HasCharRuleStrategy(_sp<BaseMixinsCombined<Input, Output>> mixins) : HasValueRuleStrategy<int, Input, Output> (mixins) {}
+				HasCharRuleStrategy(_sp<BaseMixinsCombined<Input, Output>> mixins) : HasValueRuleStrategy<int, Input, Output>(mixins) {}
 
 				virtual Output matches(int value, Input input) override {
 					const int idx = input.first;
 					const Tokens tokens = input.second;
 					auto location = tokens->poll(idx);
 					if (location && value == location->character) {
-						return idx + 1;
+						return make_pair(idx + 1, nullptr);
 					}
 					return FAILURE;
 				}
@@ -95,7 +105,7 @@ namespace flock {
 					const Tokens tokens = input.second;
 					auto range = tokens->pollRange(value.size(), idx);
 					if (range && value == range->source) {
-						return idx + value.size();
+						return make_pair(idx + value.size(), nullptr);
 					}
 					return FAILURE;
 				}
@@ -105,7 +115,7 @@ namespace flock {
 			public:
 				CharRangeRuleStrategy(_sp<BaseMixinsCombined<Input, Output>> mixins) : MixinsRuleStrategy< Input, Output>(mixins) {}
 
-				virtual Output accept(const _sp<RuleVisitor<Input, Output>> visitor, const _sp<Rule> baseRule, const Input input) override {
+				virtual Output accept(const _sp<EvaluationVisitor> visitor, const _sp<Rule> baseRule, const Input input) override {
 					if (mixins->isEnd(input)) {
 						return FAILURE;
 					}
@@ -119,7 +129,7 @@ namespace flock {
 					auto location = tokens->poll(idx);
 
 					if (location && start <= location->character && end >= location->character) {
-						return idx + 1;
+						return make_pair(idx + 1, nullptr);
 					}
 					return FAILURE; // return failure.
 				}
@@ -128,42 +138,166 @@ namespace flock {
 
 			class EvaluationLibraryStrategy : public LibraryStrategy<Input, Output> {
 			public:
-				virtual Output accept(const _sp<RuleVisitor<Input, Output>> visitor, _sp<Library> library, Input input) override {
-					vector<string> * symbolNames = library->getSymbolNames();
-					vector<string> * partNames = library->getPartNames();
-					Output out = -1;
+				virtual Output accept( _sp<EvaluationVisitor> visitor, _sp<Library> library, Input input) override {
+					vector<string> symbolNames = library->getSymbolNames();
+					Output out = FAILURE;
 					string name = "";
-					for (auto rule = symbolNames->begin(); rule != symbolNames->end(); ++rule) {
+
+					for (auto rule = symbolNames.begin(); rule != symbolNames.end(); ++rule) {
+						cout << "\nEVALUATING : " << *rule << "\n";
 						Output newOut = visitor->visit(*rule, input);
-						if (newOut > out) {
-							name = "" + *rule;
+						cout << "\nEVALUATED : " << *rule << " : " << to_string(newOut.first) << "\n";
+						if (newOut.first > out.first) {
 							out = newOut;
+							name = *rule;
 						}
 					}
-					for (auto rule = partNames->begin(); rule != partNames->end(); ++rule) {
-						Output newOut = visitor->visit(*rule, input);
-						if (newOut > out) {
-							name = "" + *rule;
-							out = newOut;
-						}
+					if (out.first >= 0) {
+						auto evaluated = input.second->popRange(out.first);
+						cout << "\nChose : " << name << " : \"" << evaluated->source << "\"" << " : " << *evaluated <<"\n";
 					}
 					return out; // return the first as a success
 				};
-				virtual Output accept(const _sp<RuleVisitor<Input, Output>> visitor, _sp<Library> library) override {
-					return -1; // maybe setup console or something later.
+				virtual Output accept(const _sp<EvaluationVisitor> visitor, _sp<Library> library) override {
+					return FAILURE; // maybe setup console or something later.
 				}
 			};
 
 			const static _sp<EvaluationMixins> evaluationMixins = make_shared<EvaluationMixins>();
 
-			static _sp<Strategies<Input, Output>> evaluationStrategies() {
-				_sp<LibraryStrategy<Input, Output>> libraryStrategy = make_shared<EvaluationLibraryStrategy>();
-				_sp<CachingStrategies<Input, Output, Key>> strategies = make_shared<CachingStrategies<Input, Output, Key>>(libraryStrategy, evaluationMixins);
-				addLogicStrategies<Input, Output>(evaluationMixins, strategies);
+			class SyntaxNode {
+			public:
+				SyntaxNode(string type) : type(type) {}
+				SyntaxNode(_sp<SyntaxNode> parent, string type) : type(type), parent(parent) {}
+				SyntaxNode(_sp<SyntaxNode> parent, _sp<Range> range) : type(type), range(range), parent(parent) {}
 
-				strategies->setStrategy(StringRules::EqualChar, make_shared<HasCharRuleStrategy>(evaluationMixins));
-				strategies->setStrategy(StringRules::EqualString, make_shared<HasStringRuleStrategy>(evaluationMixins));
-				strategies->setStrategy(StringRules::CharRange, make_shared<CharRangeRuleStrategy>(evaluationMixins));
+				void append(_sp<SyntaxNode> syntaxNode) {
+					children.push_back(syntaxNode);
+				}
+
+				_sp_vec<SyntaxNode> getChildren() {
+					return children;
+				}
+				void setRange(_sp<Range> newRange) {
+					range = newRange;
+				}
+				_sp<Range> getRange() {
+					if (range == nullptr) {
+						range = getChildrenRange();
+					}
+					return range;
+				}
+				_sp<SyntaxNode> getParent() {
+					return parent;
+				}
+
+				friend std::ostream& operator<<(std::ostream& os, const SyntaxNode& node) {
+					string printRange = node.range ? node.range->source : "";
+					 os << "{ " << node.type << " : " << printRange << " : [";
+					 for (_sp<SyntaxNode> child : node.children) {
+						 os << *child;
+					 }
+					 return os << "]}";
+				};
+
+			protected:
+				string type;
+				_sp<Range> range = nullptr;
+				_sp_vec<SyntaxNode> children;
+				_sp<SyntaxNode> parent = nullptr;
+
+				_sp<Range> getChildrenRange() {
+
+					if (children.empty()) {
+						return nullptr;
+					}
+					auto option = children.at(0);
+					if (!option || option->range) {
+						return nullptr;
+					}
+					_sp<Range> range = option->range;
+					for (int i = 1; i < children.size(); i++) {
+						auto option = children.at(i);
+
+						if (!option || option->range) {
+							return range;
+						}
+						range = std::make_shared<Range>(Range(range, option->range));
+					}
+					return range;
+				}
+			};
+
+
+			class CollectingRuleVisitor : public RuleVisitor<Input, Output> {
+			public:
+				CollectingRuleVisitor(_sp<Library> library, _sp<Strategies<Input, Output>> strategies) : RuleVisitor<Input, Output>(library, strategies) {}
+
+				_sp<SyntaxNode> getSyntaxNode() {
+					return syntaxNode;
+				}
+
+				_sp<SyntaxNode> attachNode(_sp<SyntaxNode> childNode) {
+					if (this->syntaxNode) {
+						this->syntaxNode->append(childNode);
+						return childNode;
+					}
+					setNode(childNode);
+					return childNode;
+				}
+				_sp< SyntaxNode> attachNode(_sp<Range> range) {
+					if (range) {
+						return attachNode(make_shared<SyntaxNode>(this->syntaxNode, range));
+					}
+					return nullptr;
+				}
+				//SyntaxNode(string type) : type(type) {}
+				void setNode(_sp<SyntaxNode> childNode) {
+					this->syntaxNode = childNode;
+				}
+
+				virtual Output visitSymbol(string name, _sp<Rule> rule, Input input) override {
+					_sp<SyntaxNode> current = this->syntaxNode;
+					_sp<SyntaxNode> next = make_shared<SyntaxNode>(current, name);
+					setNode(next);
+					Output out = this->visit(rule, input);
+					if (out.first >= 0) {
+						if (next->getChildren().empty()) {
+							_sp<Range> range = input.second->pollRange(out.first - input.first, input.first);
+							next->setRange(range);
+						}
+						if (current) {
+							setNode(current);
+							attachNode(next);
+						}
+						else {
+							setNode(next);
+						}
+
+						return make_pair(out.first, next);
+					}
+					else {
+						setNode(current);
+					}
+					return out;
+				}
+				virtual void clear() override {
+					syntaxNode = nullptr;
+				}
+			protected:
+				_sp<SyntaxNode> syntaxNode;
+			};
+
+		
+
+			static _sp<Strategies<Input, Output>> evaluationStrategies() {
+				auto strategies = cache<Input, Output, Key, Store>(evaluationMixins);
+
+				addLogicStrategies<Input, Output>(evaluationMixins, strategies);
+				strategies->setLibraryStrategy(make_shared<EvaluationLibraryStrategy>());
+				strategies->addRuleStrategy(StringRules::EqualChar, make_shared<HasCharRuleStrategy>(evaluationMixins));
+				strategies->addRuleStrategy(StringRules::EqualString, make_shared<HasStringRuleStrategy>(evaluationMixins));
+				strategies->addRuleStrategy(StringRules::CharRange, make_shared<CharRangeRuleStrategy>(evaluationMixins));
 				return strategies;
 			}
 		}

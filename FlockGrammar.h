@@ -64,11 +64,7 @@ namespace flock {
 					rule::RULE("identifier") })
 				}));
 
-			library.addSymbol("aliasList", rule::OR({ rule::SEQ({rule::RULE("alias"), rule::REP(rule::SEQ({rule::RULE("whitespace*"),
-						rule::EQ(','),
-						rule::RULE("whitespace*"),
-						rule::RULE("aliasList"),
-						rule::RULE("whitespace*")}))}),
+			library.addPart("aliasList", rule::OR({rule::RULE("alias"),
 				rule::SEQ({ rule::EQ('('), 
 					rule::RULE("whitespace*"), 
 					rule::RULE("aliasList"), 
