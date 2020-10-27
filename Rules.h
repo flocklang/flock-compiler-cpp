@@ -17,6 +17,7 @@
 #define FLOCK_COMPILER_RULES_H
 
 #include "Util.h"
+#include "Visitor.h"
 #include "IDCounter.h"
 #include <memory>
 #include <vector>
@@ -31,31 +32,41 @@
 namespace flock {
 	namespace rule {
 		using namespace std;
+		using namespace visitor;
 		namespace types {
 
-
 			static IDCounter ids;
-
-			template<typename T>
-			using StringPtrMap = map<const string, _sp<T>>;
-
 			// forwad declerations as we have cyclic dependencies on declaration.
 			struct Rule;
-			using RuleMap = StringPtrMap<Rule>;
 
 			class TerminalRule;
 			class UnaryRule;
 			class CollectionRule;
 
 			template<typename IN, typename OUT>
-			class RuleStrategy;
-			template<typename IN, typename OUT>
-			class LibraryStrategy;
-
-			template<typename IN, typename OUT>
 			class RuleVisitor;
 
-			class Library;
+			class RuleLibrary;
+
+			template<typename IN, typename OUT>
+			using RuleStrategy = NodeStrategy<IN, OUT, Rule, RuleVisitor<IN,OUT>>;
+
+			template<typename IN, typename OUT>
+			using LibraryStrategy = NodeLibraryStrategy<IN, OUT, Rule, RuleVisitor<IN, OUT>, RuleLibrary>;
+			template<typename IN, typename OUT>
+			using LibraryStrategies =  NodeLibraryStrategies<IN, OUT, Rule, RuleStrategy<IN,OUT>, LibraryStrategy<IN,OUT>>;
+			template<typename IN, typename OUT>
+			using WrappingStrategies =  WrappingNodeStrategies<IN, OUT, Rule, RuleStrategy<IN, OUT>, LibraryStrategy<IN, OUT>>;
+
+			template<typename IN, typename OUT>
+			using WrappingRuleStrategy = WrappingNodeStrategy<IN, OUT, Rule, RuleVisitor<IN, OUT>>;
+
+			template<typename IN, typename OUT>
+			using WrappingLibraryStrategy = WrappingNodeLibraryStrategy<IN, OUT, Rule, RuleVisitor<IN, OUT>, LibraryStrategy<IN, OUT>>;
+
+			template<typename IN, typename OUT>
+			using RuleStrategies = NodeStrategies<IN, OUT, Rule, RuleStrategy<IN, OUT>, LibraryStrategy<IN, OUT>>;
+			
 
 			/// <summary>
 			/// All rules have a unique id on instantiation.
@@ -71,174 +82,32 @@ namespace flock {
 				const int id = ids.next();
 			};
 
-			class Library {
+			class RuleLibrary : public NodeLibrary<Rule> {
 			public:
-				_sp <Rule> addPart(const string partName, _sp <Rule> expression) {
-					parts.emplace(partName, expression);
-					partNames.push_back(partName);
-					return expression;
-				}
 
 				_sp <Rule> addSymbol(const string symbolName, _sp <Rule> expression) {
-					symbols.emplace(symbolName, expression);
-					symbolNames.push_back(symbolName);
-					return expression;
+					return addNode(symbolName, expression);
+				}
+				_sp <Rule> addPart(const string partName, _sp <Rule> expression) {
+					return parts.addNode(partName, expression);
 				}
 
-				_sp<Rule> getPart(const string partName) {
-					RuleMap::iterator it = parts.find(partName);
-					if (it == parts.end()) {
-						return nullptr;
-					}
-					return it->second;
-				}
 				_sp<Rule> getSymbol(const string symbolName) {
-					RuleMap::iterator it = symbols.find(symbolName);
-					if (it == symbols.end()) {
-						return nullptr;
-					}
-					return it->second;
+					return getNode(symbolName);
+				}
+				_sp<Rule> getPart(const string partName) {
+					return  parts.getNode(partName);
 				}
 				vector<string> getSymbolNames() {
-					return symbolNames;
+					return getNames();
 				}
 				vector<string> getPartNames() {
-					return partNames;
+					return parts.getNames();
 				}
 			protected:
-				vector<string> symbolNames;
-				vector<string> partNames;
-				RuleMap symbols;
-				RuleMap parts;
+				// parts are usefull rules, but we are not interested in collecting information on them.
+				NodeLibrary<Rule> parts;
 			};
-
-			template<typename IN, typename OUT>
-			class Strategies {
-			public:
-				virtual ~Strategies() = default;
-				virtual _sp<RuleStrategy<IN, OUT>> getRuleStrategyById(const int typeId) = 0;
-				virtual _sp<RuleStrategy<IN, OUT>> getRuleStrategy(_sp<Rule> rule) {
-					return getRuleStrategyById(rule->type);
-				}
-				virtual void addRuleStrategy(const int type, _sp<RuleStrategy<IN, OUT>> strategy) = 0;
-				virtual _sp<LibraryStrategy<IN, OUT>> getLibraryStrategy() = 0;
-				virtual void setLibraryStrategy(_sp<LibraryStrategy<IN, OUT>> strategy) = 0;
-				virtual void clear() {
-				}
-			};
-
-			template<typename IN, typename OUT>
-			class LibraryStrategies : public Strategies<IN,OUT> {
-			public:
-				LibraryStrategies() {}
-				virtual _sp<RuleStrategy<IN, OUT>> getRuleStrategyById(const int typeId) override {
-					auto it = strategyMap.find(typeId);
-					if (it == strategyMap.end()) {
-						return nullptr;
-					}
-					return it->second;
-				}
-
-				virtual void addRuleStrategy(const int type, _sp<RuleStrategy<IN, OUT>> strategy)  override {
-					strategyMap.emplace(type, strategy);
-				}
-
-				virtual _sp<LibraryStrategy<IN, OUT>> getLibraryStrategy()  override {
-					return libraryStrategy;
-				}
-
-				virtual void setLibraryStrategy(_sp<LibraryStrategy<IN, OUT>> strategy) override {
-					libraryStrategy = strategy;
-				}
-			protected:
-				map<int, _sp<RuleStrategy<IN, OUT>>> strategyMap;
-				_sp<LibraryStrategy<IN, OUT>> libraryStrategy;
-			};
-
-			template<typename IN, typename OUT>
-			class WrappingStrategies : public Strategies<IN, OUT> {
-			public:
-				WrappingStrategies(_sp<Strategies<IN, OUT>> strategies) : strategies(strategies) {}
-
-				virtual _sp<RuleStrategy<IN, OUT>> getRuleStrategyById(const int typeId) override {
-					return strategies->getRuleStrategyById(typeId);
-				}
-
-				virtual _sp<RuleStrategy<IN, OUT>> getRuleStrategy(_sp<Rule> rule) {
-					return strategies->getRuleStrategy(rule);
-				}
-
-				virtual void addRuleStrategy(const int type, _sp<RuleStrategy<IN, OUT>> strategy)  override {
-					strategies->addRuleStrategy(type, strategy);
-				}
-
-				virtual _sp<LibraryStrategy<IN, OUT>> getLibraryStrategy()  override {
-					return strategies->getLibraryStrategy();
-				}
-
-				virtual void setLibraryStrategy(_sp<LibraryStrategy<IN, OUT>> strategy) override {
-					strategies->setLibraryStrategy(strategy);
-				}
-
-				virtual _sp<Strategies<IN, OUT>> getWrappedStratagies() {
-					return strategies;
-				}
-				virtual void clear() override{
-					strategies->clear();
-				}
-			protected:
-				_sp<Strategies<IN, OUT>> strategies;
-			};
-
-			template<typename IN, typename OUT>
-			class RuleStrategy {
-			public:
-				virtual ~RuleStrategy() = default;
-				virtual OUT accept(_sp<RuleVisitor<IN, OUT>> visitor, _sp<Rule> rule, IN input) = 0;
-			};
-
-			template<typename IN, typename OUT>
-			class LibraryStrategy {
-			public:
-				virtual ~LibraryStrategy() = default;
-				virtual OUT accept(_sp<RuleVisitor<IN, OUT>> visitor, _sp<Library> library, IN input) = 0;
-				virtual OUT accept(_sp<RuleVisitor<IN, OUT>> visitor, _sp<Library> library) = 0;
-			};
-
-			/// <summary>
-			/// Sometime we may just want to wrap a strategy, to implement common functionality, for instance history.
-			/// </summary>
-			/// <param name="wrapped"></param>
-			/// <returns></returns>
-			template<typename IN, typename OUT>
-			class WrappingRuleStrategy : public RuleStrategy <IN, OUT> {
-			public:
-				WrappingRuleStrategy(_sp<RuleStrategy <IN, OUT>> wrapped) : wrapped(wrapped) {}
-				
-				_sp<RuleStrategy <IN, OUT>> getWrapped() {
-					return wrapped;
-				}
-			protected:
-				_sp<RuleStrategy <IN, OUT>> wrapped;
-			};
-			
-			/// <summary>
-			/// Sometime we may just want to wrap a strategy, to implement common functionality, for instance history.
-			/// </summary>
-			/// <param name="wrapped"></param>
-			/// <returns></returns>
-			template<typename IN, typename OUT>
-			class WrappingLibraryStrategy : public LibraryStrategy <IN, OUT> {
-			public:
-				WrappingLibraryStrategy(_sp<LibraryStrategy <IN, OUT>> wrapped) : wrapped(wrapped) {}
-
-				_sp<LibraryStrategy <IN, OUT>> getWrapped() {
-					return wrapped;
-				}
-			protected:
-				_sp<LibraryStrategy <IN, OUT>> wrapped;
-			};
-			
 
 			/// <summary>
 			/// Helper class to save on the typing.
@@ -270,16 +139,12 @@ namespace flock {
 			/// <typeparam name="IN"></typeparam>
 			/// <typeparam name="OUT"></typeparam>
 			template<typename IN, typename OUT>
-			class RuleVisitor : public std::enable_shared_from_this<RuleVisitor<IN, OUT>> {
+			class RuleVisitor : public NodeVisitor<IN, OUT,Rule, RuleLibrary, RuleStrategies<IN, OUT>, RuleVisitor<IN,OUT>> {
 			public:
-				RuleVisitor(_sp<Library> library, _sp<Strategies<IN, OUT>> strategies) : library(library), strategies(strategies) {}
+				RuleVisitor(_sp<RuleLibrary> library, _sp<RuleStrategies<IN, OUT>> strategies) : NodeVisitor<IN, OUT, Rule, RuleLibrary, RuleStrategies<IN, OUT>, RuleVisitor<IN, OUT>>(library, strategies) {}
 
-				virtual OUT visit(_sp<Rule> rule, IN input) {
-					auto strategy = strategies->getRuleStrategy(rule);
-					return strategy->accept(this->shared_from_this(), rule, input);
-				}
 
-				virtual OUT visit(const string name, IN input) {
+				virtual OUT visitByName(const string name, IN input) override {
 					auto symRule = getSymbol(name);
 					if (symRule) {
 						return visitSymbol(name, symRule, input);
@@ -296,28 +161,13 @@ namespace flock {
 					return this->visit(rule, input);
 				}
 
-				virtual OUT begin(IN input) {
-					auto strategy = strategies->getLibraryStrategy();
-					return strategy->accept(this->shared_from_this(), library, input);
-				}
-
-				virtual OUT begin() {
-					auto strategy = strategies->getLibraryStrategy();
-					return strategy->accept(this->shared_from_this(), library);
-				}
-
 				virtual _sp<Rule> getPart(const string partName) {
 					return library->getPart(partName);
 				}
+
 				virtual _sp<Rule> getSymbol(const string symbolName) {
 					return library->getSymbol(symbolName);
 				}
-
-				virtual void clear() {
-				}
-			protected:
-				_sp<Library> library;
-				_sp<Strategies<IN, OUT>> strategies;
 			};
 
 			class TerminalRule : public Rule {

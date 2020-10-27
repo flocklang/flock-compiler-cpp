@@ -68,10 +68,10 @@ namespace flock {
 		static _sp<Rule> LOWER_ALPHA() {
 			return  RANGE('a', 'z');
 		}
-		static _sp<Rule> alpha() {
+		static _sp<Rule> ALPHA() {
 			return  OR(LOWER_ALPHA(), UPPER_ALPHA());
 		}
-		static _sp<Rule> digit() {
+		static _sp<Rule> DIGIT() {
 			return  RANGE('0', '9');
 		}
 	}

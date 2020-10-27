@@ -151,7 +151,6 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="FlockCompilerCpp.cpp" />
-    <ClCompile Include="Rules.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include=".gitattributes" />
@@ -174,17 +173,17 @@
     <ClInclude Include="IDCounter.h" />
     <ClInclude Include="SourceEvaluation.h" />
     <ClInclude Include="LogicRules.h" />
-    <ClInclude Include="RuleFunctions.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="RuleHistory.h" />
     <ClInclude Include="Rules.h" />
-    <ClInclude Include="RuleTypes.h" />
     <ClInclude Include="LocationSupplier.h" />
     <ClInclude Include="Parser.h" />
     <ClInclude Include="Source.h" />
     <ClInclude Include="StringRules.h" />
     <ClInclude Include="Supplier.h" />
+    <ClInclude Include="Syntax.h" />
     <ClInclude Include="Util.h" />
+    <ClInclude Include="Visitor.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="FlockCompilerCpp.rc" />

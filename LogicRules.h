@@ -92,7 +92,7 @@ namespace flock {
 		public:
 			virtual OUT accept(_sp<RuleVisitor<IN, OUT>> visitor, _sp<Rule> baseRule, IN input) override {
 				const auto aliasRule = std::dynamic_pointer_cast<AliasRule>(baseRule);
-				return visitor->visit(aliasRule->getAlias(), input);
+				return visitor->visitByName(aliasRule->getAlias(), input);
 			}
 		};
 
@@ -358,22 +358,22 @@ namespace flock {
 		};
 
 		template<typename IN, typename OUT>
-		static void addLogicStrategies(_sp<LogicMixinsCombined<IN, OUT>> mixins, _sp<Strategies<IN, OUT>> strategies) {
+		static void addLogicStrategies(_sp<LogicMixinsCombined<IN, OUT>> mixins, _sp<RuleStrategies<IN, OUT>> strategies) {
 
-			strategies->addRuleStrategy(LogicRules::Any, make_shared<AnyRuleStrategy<IN, OUT>>(mixins));
-			strategies->addRuleStrategy(LogicRules::End, make_shared<EndRuleStrategy<IN, OUT>>(mixins));
+			strategies->addStrategy(LogicRules::Any, make_shared<AnyRuleStrategy<IN, OUT>>(mixins));
+			strategies->addStrategy(LogicRules::End, make_shared<EndRuleStrategy<IN, OUT>>(mixins));
 
-			strategies->addRuleStrategy(LogicRules::Not, make_shared<NotRuleStrategy<IN, OUT>>(mixins));
-			strategies->addRuleStrategy(LogicRules::AnyBut, make_shared<AnyButRuleStrategy<IN, OUT>>(mixins));
-			strategies->addRuleStrategy(LogicRules::Optional, make_shared<OptionalRuleStrategy<IN, OUT>>(mixins));
+			strategies->addStrategy(LogicRules::Not, make_shared<NotRuleStrategy<IN, OUT>>(mixins));
+			strategies->addStrategy(LogicRules::AnyBut, make_shared<AnyButRuleStrategy<IN, OUT>>(mixins));
+			strategies->addStrategy(LogicRules::Optional, make_shared<OptionalRuleStrategy<IN, OUT>>(mixins));
 
-			strategies->addRuleStrategy(LogicRules::Repeat, make_shared<RepeatRuleStrategy<IN, OUT>>(mixins));
-			strategies->addRuleStrategy(LogicRules::Alias, make_shared<AliasRuleStrategy<IN, OUT>>());
+			strategies->addStrategy(LogicRules::Repeat, make_shared<RepeatRuleStrategy<IN, OUT>>(mixins));
+			strategies->addStrategy(LogicRules::Alias, make_shared<AliasRuleStrategy<IN, OUT>>());
 
-			strategies->addRuleStrategy(LogicRules::Sequence, make_shared<SeqRuleStrategy<IN, OUT>>(mixins));
-			strategies->addRuleStrategy(LogicRules::Or, make_shared<OrRuleStrategy<IN, OUT>>(mixins));
-			strategies->addRuleStrategy(LogicRules::And, make_shared<AndRuleStrategy<IN, OUT>>(mixins));
-			strategies->addRuleStrategy(LogicRules::XOr, make_shared<XOrRuleStrategy<IN, OUT>>(mixins));
+			strategies->addStrategy(LogicRules::Sequence, make_shared<SeqRuleStrategy<IN, OUT>>(mixins));
+			strategies->addStrategy(LogicRules::Or, make_shared<OrRuleStrategy<IN, OUT>>(mixins));
+			strategies->addStrategy(LogicRules::And, make_shared<AndRuleStrategy<IN, OUT>>(mixins));
+			strategies->addStrategy(LogicRules::XOr, make_shared<XOrRuleStrategy<IN, OUT>>(mixins));
 		}
 
 		// Terminal Rule

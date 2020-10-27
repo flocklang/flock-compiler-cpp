@@ -191,15 +191,15 @@ namespace flock {
 			template<typename IN, typename OUT, typename KEY = IN, typename STORE = OUT>
 			class CachingStrategies : public WrappingStrategies<IN, OUT> {
 			public:
-				CachingStrategies(_sp<Strategies<IN, OUT>> strategies, _sp<RuleHistories<KEY, STORE>> histories, _sp<HistoryMixinsCombined<IN, OUT, KEY, STORE>> mixins) :
+				CachingStrategies(_sp<RuleStrategies<IN, OUT>> strategies, _sp<RuleHistories<KEY, STORE>> histories, _sp<HistoryMixinsCombined<IN, OUT, KEY, STORE>> mixins) :
 					WrappingStrategies<IN, OUT>(strategies),
 					histories(histories), mixins(mixins) {}
 
-				CachingStrategies(_sp<Strategies<IN, OUT>> strategies, _sp<HistoryMixinsCombined<IN, OUT, KEY, STORE>> mixins) :
+				CachingStrategies(_sp<RuleStrategies<IN, OUT>> strategies, _sp<HistoryMixinsCombined<IN, OUT, KEY, STORE>> mixins) :
 					CachingStrategies(strategies, make_shared<RuleHistories<KEY, STORE>>(), mixins) {}
 
-				virtual void addRuleStrategy(const int type, _sp<RuleStrategy<IN, OUT>> strategy) override {
-					getWrappedStratagies()->addRuleStrategy(type, cacheResult<IN, OUT, KEY, STORE>(histories, mixins, strategy));
+				virtual void addStrategy(const int type, _sp<RuleStrategy<IN, OUT>> strategy) override {
+					getWrappedStratagies()->addStrategy(type, cacheResult<IN, OUT, KEY, STORE>(histories, mixins, strategy));
 				}
 				_sp<RuleHistories<KEY, STORE>> getHistories() {
 					return histories;
@@ -214,12 +214,12 @@ namespace flock {
 			};
 
 			template<typename IN, typename OUT, typename KEY = IN, typename STORE = OUT>
-			static _sp<CachingStrategies<IN, OUT, KEY>> cache(_sp<Strategies<IN, OUT>> strategies, _sp<RuleHistories<KEY, STORE>> histories, _sp<HistoryMixinsCombined<IN, OUT, KEY, STORE>> mixins) {
+			static _sp<CachingStrategies<IN, OUT, KEY>> cache(_sp<RuleStrategies<IN, OUT>> strategies, _sp<RuleHistories<KEY, STORE>> histories, _sp<HistoryMixinsCombined<IN, OUT, KEY, STORE>> mixins) {
 				return make_shared<CachingStrategies<IN, OUT, KEY, STORE>>(strategies, histories, mixins);
 			}
 
 			template<typename IN, typename OUT, typename KEY = IN, typename STORE = OUT>
-			static _sp<CachingStrategies<IN, OUT, KEY, STORE>> cache(_sp<Strategies<IN, OUT>> strategies, _sp<HistoryMixinsCombined<IN, OUT, KEY, STORE>> mixins) {
+			static _sp<CachingStrategies<IN, OUT, KEY, STORE>> cache(_sp<RuleStrategies<IN, OUT>> strategies, _sp<HistoryMixinsCombined<IN, OUT, KEY, STORE>> mixins) {
 				return make_shared<CachingStrategies<IN, OUT, KEY, STORE>>(strategies, mixins);
 			}
 

@@ -22,14 +22,8 @@
     <Filter Include="Header Files\Util">
       <UniqueIdentifier>{b26254b4-6bb8-4cff-aee9-4199325eefed}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Header Files\Token">
-      <UniqueIdentifier>{6fc1c8c6-fded-45fc-8f33-5c081bbf4b8e}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Header Files\AST">
       <UniqueIdentifier>{b1b781ea-ce82-439f-833c-4cf550a88706}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Header Files\EBNF">
-      <UniqueIdentifier>{b9a1e4cc-1057-463f-8d7d-62fe31988a89}</UniqueIdentifier>
     </Filter>
     <Filter Include="grammers">
       <UniqueIdentifier>{894a31a7-e4f2-434e-b0db-e9f7f1befd58}</UniqueIdentifier>
@@ -46,12 +40,12 @@
     <Filter Include="Header Files\Rules\FBNF">
       <UniqueIdentifier>{b6bfa2b4-7406-487c-97f4-c833d15e2812}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Header Files\Syntax">
+      <UniqueIdentifier>{1d43ebf4-0fb9-479f-9fa0-c5d754fc9a5c}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="FlockCompilerCpp.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Rules.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -111,14 +105,8 @@
     <ClInclude Include="ConsoleFormat.h">
       <Filter>Header Files\Util</Filter>
     </ClInclude>
-    <ClInclude Include="RuleTypes.h">
-      <Filter>Header Files\EBNF</Filter>
-    </ClInclude>
     <ClInclude Include="resource.h">
       <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="RuleFunctions.h">
-      <Filter>Header Files\EBNF</Filter>
     </ClInclude>
     <ClInclude Include="IDCounter.h">
       <Filter>Header Files\Util</Filter>
@@ -140,6 +128,12 @@
     </ClInclude>
     <ClInclude Include="EBNFPrinter.h">
       <Filter>Header Files\Rules\FBNF</Filter>
+    </ClInclude>
+    <ClInclude Include="Syntax.h">
+      <Filter>Header Files\Syntax</Filter>
+    </ClInclude>
+    <ClInclude Include="Visitor.h">
+      <Filter>Header Files\Visitor</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

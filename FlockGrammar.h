@@ -31,15 +31,15 @@ namespace flock {
 	using namespace rule;
 	namespace grammar {
 		using R = _sp<types::Rule>;
-		static types::Library createFlockLibrary() {
-			types::Library library;
+		static types::RuleLibrary createFlockLibrary() {
+			types::RuleLibrary library;
 
 			library.addPart("eof", rule::END());
 			library.addPart("newline", rule::NEW_LINE());
 			library.addPart("blank", rule::BLANK());
 			library.addPart("whitespace", rule::OR(rule::RULE("blank"), rule::RULE("newline")));
-			library.addPart("digit", rule::digit());
-			library.addPart("alpha", rule::alpha());
+			library.addPart("digit", rule::DIGIT());
+			library.addPart("alpha", rule::ALPHA());
 			library.addPart("lineEnd", rule::REP(1, 0,rule::SEQ(rule::RULE("blank*"), rule::OR(rule::RULE("newline"), rule::EQ(';')) )));
 			library.addPart("alphanum", rule::OR(rule::RULE("alpha"), rule::RULE("digit")));
 			library.addPart("integer", rule::RULE("digit+"));

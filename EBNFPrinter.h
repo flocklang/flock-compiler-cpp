@@ -45,7 +45,7 @@ namespace flock {
 			/// </summary>
 			class PrintTerminal : public RuleStrategy<Input, Output> {
 			public:
-				PrintTerminal(const string value) : RuleStrategy(), value(value) {}
+				PrintTerminal(const string value) : value(value) {}
 
 				virtual Output accept(_sp<PrintVisitor> visitor, _sp<Rule> baseRule, Input bracketHints) override {
 					return colourize(Colour::CYAN, value);
@@ -57,7 +57,7 @@ namespace flock {
 			template<typename T>
 			class PrintEquals : public RuleStrategy<Input, Output> {
 			public:
-				PrintEquals() : RuleStrategy() {}
+				PrintEquals() {}
 
 				virtual Output accept(_sp<PrintVisitor> visitor, _sp<Rule> baseRule, Input bracketHints) override {
 					const auto rule = std::dynamic_pointer_cast<ValuesRule<T>>(baseRule);
@@ -143,7 +143,7 @@ namespace flock {
 			/// </summary>
 			class PrintRange : public RuleStrategy<Input, Output> {
 			public:
-				PrintRange() : RuleStrategy() {}
+				PrintRange()  {}
 
 				virtual Output accept(_sp<PrintVisitor> visitor, _sp<Rule> baseRule, Input bracketHints) override {
 					const auto rule = std::dynamic_pointer_cast<ValuesRule<int>>(baseRule);
@@ -345,23 +345,20 @@ namespace flock {
 
 			class PrintLibraryStrategy : public LibraryStrategy<Input, Output> {
 			public:
-				virtual Output accept(const _sp<RuleVisitor<Input, Output>> visitor, _sp<Library> library, Input input) override {
+				virtual Output accept(const _sp<RuleVisitor<Input, Output>> visitor, _sp<RuleLibrary> library, Input input) override {
 					vector<string> symbolNames = library->getSymbolNames();
 					vector<string> partNames = library->getPartNames();
 					string name = "";
 					Output out = colourize(Colour::YELLOW, "\n==== PARTS ====\n");
 					for (auto rule = partNames.begin(); rule != partNames.end(); ++rule) {
-						out += colourize(Colour::DARK_MAGENTA, *rule + " = ") + visitor->visit(*rule, input) + ";\n";
+						out += colourize(Colour::DARK_MAGENTA, *rule + " = ") + visitor->visitByName(*rule, input) + ";\n";
 					}
 					out += colourize(Colour::YELLOW, "==== SYMBOLS ====\n");
 					for (auto rule = symbolNames.begin(); rule != symbolNames.end(); ++rule) {
-						out += colourize(Colour::DARK_MAGENTA, *rule + " = ") + visitor->visit(*rule, input) + ";\n";
+						out += colourize(Colour::DARK_MAGENTA, *rule + " = ") + visitor->visitByName(*rule, input) + ";\n";
 					}
 					return out; // return the first as a success
 				};
-				virtual Output accept(const _sp<RuleVisitor<Input, Output>> visitor, _sp<Library> library) override {
-					return accept(visitor, library, BracketHints(false, -1));
-				}
 			};
 
 
@@ -369,20 +366,20 @@ namespace flock {
 				_sp<LibraryStrategies<Input, Output>> strategies = make_shared<LibraryStrategies<Input, Output>>();
 
 				strategies->setLibraryStrategy(make_shared<PrintLibraryStrategy>());
-				strategies->addRuleStrategy(StringRules::EqualChar, make_shared<PrintEqualsChar>());
-				strategies->addRuleStrategy(StringRules::EqualString, make_shared<PrintEqualsString>());
-				strategies->addRuleStrategy(StringRules::CharRange, make_shared<PrintRange>());
-				strategies->addRuleStrategy(LogicRules::Not, make_shared<PrintNot>());
-				strategies->addRuleStrategy(LogicRules::AnyBut, make_shared<PrintAnyBut>());
-				strategies->addRuleStrategy(LogicRules::Repeat, make_shared<PrintRepeat>());
-				strategies->addRuleStrategy(LogicRules::Optional, make_shared<PrintOptional>());
-				strategies->addRuleStrategy(LogicRules::Alias, make_shared<PrintAlias>());
-				strategies->addRuleStrategy(LogicRules::End, make_shared<PrintTerminal>("? End ?"));
-				strategies->addRuleStrategy(LogicRules::Any, make_shared<PrintTerminal>("? Any ?"));
-				strategies->addRuleStrategy(LogicRules::Sequence, make_shared<PrintCollection>(", "));
-				strategies->addRuleStrategy(LogicRules::Or, make_shared<PrintCollection>(" | "));
-				strategies->addRuleStrategy(LogicRules::And, make_shared<PrintCollection>(" & "));
-				strategies->addRuleStrategy(LogicRules::XOr, make_shared<PrintCollection>(" ^ "));
+				strategies->addStrategy(StringRules::EqualChar, make_shared<PrintEqualsChar>());
+				strategies->addStrategy(StringRules::EqualString, make_shared<PrintEqualsString>());
+				strategies->addStrategy(StringRules::CharRange, make_shared<PrintRange>());
+				strategies->addStrategy(LogicRules::Not, make_shared<PrintNot>());
+				strategies->addStrategy(LogicRules::AnyBut, make_shared<PrintAnyBut>());
+				strategies->addStrategy(LogicRules::Repeat, make_shared<PrintRepeat>());
+				strategies->addStrategy(LogicRules::Optional, make_shared<PrintOptional>());
+				strategies->addStrategy(LogicRules::Alias, make_shared<PrintAlias>());
+				strategies->addStrategy(LogicRules::End, make_shared<PrintTerminal>("? End ?"));
+				strategies->addStrategy(LogicRules::Any, make_shared<PrintTerminal>("? Any ?"));
+				strategies->addStrategy(LogicRules::Sequence, make_shared<PrintCollection>(", "));
+				strategies->addStrategy(LogicRules::Or, make_shared<PrintCollection>(" | "));
+				strategies->addStrategy(LogicRules::And, make_shared<PrintCollection>(" & "));
+				strategies->addStrategy(LogicRules::XOr, make_shared<PrintCollection>(" ^ "));
 				return strategies;
 			}
 		}

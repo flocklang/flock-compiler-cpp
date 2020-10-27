@@ -35,21 +35,21 @@ using namespace flock::supplier;
 using namespace flock::rule;
 using namespace flock::rule::types;
 
-static string printRules(_sp<Library> library) {
+static string printRules(_sp<RuleLibrary> library) {
 	_sp<LibraryStrategies<printer::Input, printer::Output>> strategies = printer::printStrategies();
 
 	_sp<printer::PrintVisitor>  visitor = make_shared<printer::PrintVisitor>(library, strategies);
-	string value = visitor->begin();
+	string value = visitor->begin(printer::BracketHints());
 	return value;
 }
 
 
 
-static void MainLoop( _sp<Library> library) {
+static void MainLoop( _sp<RuleLibrary> library) {
 	_sp<ConsoleCharSupplier> consoleSupplier = make_shared<ConsoleCharSupplier>();
 	_sp<LocationSupplier> locationSupplier  = make_shared<LocationSupplier>(consoleSupplier);
 
-	_sp<Strategies<evaluator::Input, evaluator::Output>> strategies = evaluator::evaluationStrategies();
+	_sp<RuleStrategies<evaluator::Input, evaluator::Output>> strategies = evaluator::evaluationStrategies();
 	
 	_sp<evaluator::CollectingRuleVisitor>  visitor = make_shared<evaluator::CollectingRuleVisitor>(library, strategies);
 
@@ -90,7 +90,7 @@ static void MainLoop( _sp<Library> library) {
 int main()
 {
 	std::cout << colourize(Colour::YELLOW, "==== Hello Flock ====\n\n");
-	_sp<Library> library = make_shared<Library>(flock::grammar::createFlockLibrary());
+	_sp<RuleLibrary> library = make_shared<RuleLibrary>(flock::grammar::createFlockLibrary());
 	std::cout << printRules(library);
 	MainLoop(library);
 	return 0;
