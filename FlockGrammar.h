@@ -57,21 +57,19 @@ namespace flock {
 			library.addSymbol("string", rule::SEQ({ rule::EQ('"') , rule::REP(rule::OR(rule::SEQ(rule::EQ('\\'), rule::ANY()), rule::BUT(rule::EQ('"')))), rule::EQ('"') }));
 			library.addSymbol("comment", rule::SEQ({ rule::EQ('/'), rule::OR(rule::SEQ(rule::EQ('/'),   rule::UNTIL(rule::NEW_LINE())),rule::SEQ({rule::EQ('*'), rule::UNTIL(rule::EQ("*/")), rule::EQ("*/")})) }));
 			library.addSymbol("alias", rule::SEQ({ rule::RULE("identifier"),
-				rule::OPT({
 					rule::RULE("whitespace*"),
 					rule::EQ('='),
 					rule::RULE("whitespace*"),
-					rule::RULE("identifier") })
-				}));
-
-			library.addPart("aliasList", rule::OR({rule::RULE("alias"),
+					rule::RULE("identifier") }));
+			library.addPart("aliasOrIdentifier", rule::OR({ rule::RULE("alias"),rule::RULE("identifier") }));
+			library.addPart("aliasList", rule::OR({rule::RULE("aliasOrIdentifier"),
 				rule::SEQ({ rule::EQ('('), 
 					rule::RULE("whitespace*"), 
-					rule::RULE("aliasList"), 
+					rule::RULE("aliasOrIdentifier"), 
 					rule::REP(rule::SEQ({rule::RULE("whitespace*"),
 						rule::EQ(','),
 						rule::RULE("whitespace*"), 
-						rule::RULE("aliasList"),
+						rule::RULE("aliasOrIdentifier"),
 						rule::RULE("whitespace*")})), 
 					rule::RULE("whitespace*"),
 					rule::EQ(')')

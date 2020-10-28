@@ -362,8 +362,8 @@ namespace flock {
 			};
 
 
-			static _sp<LibraryStrategies<Input, Output>> printStrategies() {
-				_sp<LibraryStrategies<Input, Output>> strategies = make_shared<LibraryStrategies<Input, Output>>();
+			static _sp<BaseStrategies<Input, Output>> printStrategies() {
+				_sp<BaseStrategies<Input, Output>> strategies = make_shared<BaseStrategies<Input, Output>>();
 
 				strategies->setLibraryStrategy(make_shared<PrintLibraryStrategy>());
 				strategies->addStrategy(StringRules::EqualChar, make_shared<PrintEqualsChar>());

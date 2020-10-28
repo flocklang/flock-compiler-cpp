@@ -36,7 +36,7 @@ using namespace flock::rule;
 using namespace flock::rule::types;
 
 static string printRules(_sp<RuleLibrary> library) {
-	_sp<LibraryStrategies<printer::Input, printer::Output>> strategies = printer::printStrategies();
+	_sp<BaseStrategies<printer::Input, printer::Output>> strategies = printer::printStrategies();
 
 	_sp<printer::PrintVisitor>  visitor = make_shared<printer::PrintVisitor>(library, strategies);
 	string value = visitor->begin(printer::BracketHints());
@@ -49,7 +49,7 @@ static void MainLoop( _sp<RuleLibrary> library) {
 	_sp<ConsoleCharSupplier> consoleSupplier = make_shared<ConsoleCharSupplier>();
 	_sp<LocationSupplier> locationSupplier  = make_shared<LocationSupplier>(consoleSupplier);
 
-	_sp<RuleStrategies<evaluator::Input, evaluator::Output>> strategies = evaluator::evaluationStrategies();
+	_sp<Strategies<evaluator::Input, evaluator::Output>> strategies = evaluator::evaluationStrategies();
 	
 	_sp<evaluator::CollectingRuleVisitor>  visitor = make_shared<evaluator::CollectingRuleVisitor>(library, strategies);
 

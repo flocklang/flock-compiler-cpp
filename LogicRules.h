@@ -358,7 +358,7 @@ namespace flock {
 		};
 
 		template<typename IN, typename OUT>
-		static void addLogicStrategies(_sp<LogicMixinsCombined<IN, OUT>> mixins, _sp<RuleStrategies<IN, OUT>> strategies) {
+		static void addLogicStrategies(_sp<LogicMixinsCombined<IN, OUT>> mixins, _sp<Strategies<IN, OUT>> strategies) {
 
 			strategies->addStrategy(LogicRules::Any, make_shared<AnyRuleStrategy<IN, OUT>>(mixins));
 			strategies->addStrategy(LogicRules::End, make_shared<EndRuleStrategy<IN, OUT>>(mixins));

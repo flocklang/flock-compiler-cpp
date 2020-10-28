@@ -164,7 +164,7 @@ namespace flock {
 
 			class CollectingRuleVisitor : public RuleVisitor<Input, Output> {
 			public:
-				CollectingRuleVisitor(_sp<RuleLibrary> library, _sp<RuleStrategies<Input, Output>> strategies) : RuleVisitor<Input, Output>(library, strategies) {}
+				CollectingRuleVisitor(_sp<RuleLibrary> library, _sp<Strategies<Input, Output>> strategies) : RuleVisitor<Input, Output>(library, strategies) {}
 
 				_sp<SyntaxNode> getSyntaxNode() {
 					return syntaxNode;
@@ -223,7 +223,7 @@ namespace flock {
 
 
 
-			static _sp<RuleStrategies<Input, Output>> evaluationStrategies() {
+			static _sp<Strategies<Input, Output>> evaluationStrategies() {
 				auto strategies = cache<Input, Output, Key, Store>(evaluationMixins);
 
 				addLogicStrategies<Input, Output>(evaluationMixins, strategies);

@@ -33,22 +33,22 @@ namespace flock {
 		using NodeMap = map<const string, _sp<NODE>>;
 
 		template<typename NODE>
-		class NodeLibrary;
+		class Library;
 		template<typename IN, typename OUT, typename NODE, typename STRATEGY, typename LIBRARY_STRATEGY, typename DERIVED>
-		class NodeVisitor;
+		class Visitor;
 
 		template<typename IN, typename OUT, typename NODE, typename VISITOR>
-		class NodeStrategy;
+		class Strategy;
 		template<typename IN, typename OUT, typename NODE, typename VISITOR , typename LIBRARY >
-		class NodeLibraryStrategy;
+		class LibraryStrategy;
 		template<typename IN, typename OUT, typename NODE, typename STRATEGY , typename LIBRARY_STRATEGY >
-		class NodeStrategies;
+		class Strategies;
 		template<typename IN, typename OUT, typename NODE, typename STRATEGY , typename LIBRARY_STRATEGY >
-		class NodeLibraryStrategies;
+		class BaseStrategies;
 
 
 		template<typename NODE>
-		class NodeLibrary {
+		class Library {
 		public:
 			_sp<NODE> addNode(const string name, _sp <NODE> node) {
 				nodes.emplace(name, node);
@@ -73,9 +73,9 @@ namespace flock {
 		};
 
 		template<typename IN, typename OUT, typename NODE, typename STRATEGY, typename LIBRARY_STRATEGY>
-		class NodeStrategies {
+		class Strategies {
 		public:
-			virtual ~NodeStrategies() = default;
+			virtual ~Strategies() = default;
 			virtual _sp<STRATEGY> getStrategyById(const int typeId) = 0;
 			virtual _sp<STRATEGY> getStrategy(_sp<NODE> node) {
 				return getStrategyById(node->type);
@@ -88,9 +88,9 @@ namespace flock {
 		};
 
 		template<typename IN, typename OUT, typename NODE, typename STRATEGY, typename LIBRARY_STRATEGY>
-		class NodeLibraryStrategies : public NodeStrategies<IN, OUT, NODE, STRATEGY, LIBRARY_STRATEGY> {
+		class BaseStrategies : public Strategies<IN, OUT, NODE, STRATEGY, LIBRARY_STRATEGY> {
 		public:
-			NodeLibraryStrategies() {}
+			BaseStrategies() {}
 			virtual _sp<STRATEGY> getStrategyById(const int typeId) override {
 				auto it = strategyMap.find(typeId);
 				if (it == strategyMap.end()) {
@@ -116,9 +116,9 @@ namespace flock {
 		};
 
 		template<typename IN, typename OUT, typename NODE, typename STRATEGY, typename LIBRARY_STRATEGY>
-		class WrappingNodeStrategies : public NodeStrategies<IN, OUT, NODE, STRATEGY, LIBRARY_STRATEGY > {
+		class WrappingStrategies : public Strategies<IN, OUT, NODE, STRATEGY, LIBRARY_STRATEGY > {
 		public:
-			WrappingNodeStrategies(_sp<NodeStrategies<IN, OUT, NODE, STRATEGY, LIBRARY_STRATEGY>> strategies) : strategies(strategies) {}
+			WrappingStrategies(_sp<Strategies<IN, OUT, NODE, STRATEGY, LIBRARY_STRATEGY>> strategies) : strategies(strategies) {}
 
 			virtual _sp<STRATEGY> getStrategyById(const int typeId) override {
 				return strategies->getStrategyById(typeId);
@@ -140,27 +140,27 @@ namespace flock {
 				strategies->setLibraryStrategy(strategy);
 			}
 
-			virtual _sp<NodeStrategies<IN, OUT, NODE, STRATEGY, LIBRARY_STRATEGY>> getWrappedStratagies() {
+			virtual _sp<Strategies<IN, OUT, NODE, STRATEGY, LIBRARY_STRATEGY>> getWrappedStratagies() {
 				return strategies;
 			}
 			virtual void clear() override {
 				strategies->clear();
 			}
 		protected:
-			_sp<NodeStrategies<IN, OUT, NODE, STRATEGY, LIBRARY_STRATEGY>> strategies;
+			_sp<Strategies<IN, OUT, NODE, STRATEGY, LIBRARY_STRATEGY>> strategies;
 		};
 
 		template<typename IN, typename OUT, typename NODE, typename VISITOR>
-		class NodeStrategy {
+		class Strategy {
 		public:
-			virtual ~NodeStrategy() = default;
+			virtual ~Strategy() = default;
 			virtual OUT accept(_sp<VISITOR> visitor, _sp<NODE> node, IN input) = 0;
 		};
 
 		template<typename IN, typename OUT, typename NODE, typename VISITOR, typename LIBRARY>
-		class NodeLibraryStrategy {
+		class LibraryStrategy {
 		public:
-			virtual ~NodeLibraryStrategy() = default;
+			virtual ~LibraryStrategy() = default;
 			virtual OUT accept(_sp<VISITOR> visitor, _sp<LIBRARY> library, IN input) = 0;
 		};
 
@@ -170,15 +170,15 @@ namespace flock {
 		/// <param name="wrapped"></param>
 		/// <returns></returns>
 		template<typename IN, typename OUT, typename NODE, typename VISITOR >
-		class WrappingNodeStrategy : public NodeStrategy <IN, OUT, NODE, VISITOR> {
+		class WrappingStrategy : public Strategy <IN, OUT, NODE, VISITOR> {
 		public:
-			WrappingNodeStrategy(_sp<NodeStrategy <IN, OUT, NODE, VISITOR>> wrapped) : wrapped(wrapped) {}
+			WrappingStrategy(_sp<Strategy <IN, OUT, NODE, VISITOR>> wrapped) : wrapped(wrapped) {}
 
-			_sp<NodeStrategy <IN, OUT, NODE, VISITOR>> getWrapped() {
+			_sp<Strategy <IN, OUT, NODE, VISITOR>> getWrapped() {
 				return wrapped;
 			}
 		protected:
-			_sp<NodeStrategy <IN, OUT, NODE, VISITOR>> wrapped;
+			_sp<Strategy <IN, OUT, NODE, VISITOR>> wrapped;
 		};
 
 		/// <summary>
@@ -187,15 +187,15 @@ namespace flock {
 		/// <param name="wrapped"></param>
 		/// <returns></returns>
 		template<typename IN, typename OUT, typename NODE, typename VISITOR, typename LIBRARY>
-		class WrappingNodeLibraryStrategy : public NodeLibraryStrategy <IN, OUT, NODE,  VISITOR,  LIBRARY> {
+		class WrappingLibraryStrategy : public LibraryStrategy <IN, OUT, NODE,  VISITOR,  LIBRARY> {
 		public:
-			WrappingNodeLibraryStrategy(_sp<NodeLibraryStrategy <IN, OUT, NODE, VISITOR, LIBRARY>> wrapped) : wrapped(wrapped) {}
+			WrappingLibraryStrategy(_sp<LibraryStrategy <IN, OUT, NODE, VISITOR, LIBRARY>> wrapped) : wrapped(wrapped) {}
 
-			_sp<NodeLibraryStrategy <IN, OUT, NODE, VISITOR, LIBRARY>> getWrapped() {
+			_sp<LibraryStrategy <IN, OUT, NODE, VISITOR, LIBRARY>> getWrapped() {
 				return wrapped;
 			}
 		protected:
-			_sp<NodeLibraryStrategy <IN, OUT, NODE, VISITOR, LIBRARY>> wrapped;
+			_sp<LibraryStrategy <IN, OUT, NODE, VISITOR, LIBRARY>> wrapped;
 		};
 
 		/// <summary>
@@ -204,9 +204,9 @@ namespace flock {
 		/// <typeparam name="IN"></typeparam>
 		/// <typeparam name="OUT"></typeparam>
 		template<typename IN, typename OUT, typename NODE, typename LIBRARY, typename STRATEGIES, typename DERIVED>
-		class NodeVisitor : public std::enable_shared_from_this<DERIVED> {
+		class Visitor : public std::enable_shared_from_this<DERIVED> {
 		public:
-			NodeVisitor(_sp<LIBRARY> library, _sp<STRATEGIES> strategies) : library(library), strategies(strategies) {}
+			Visitor(_sp<LIBRARY> library, _sp<STRATEGIES> strategies) : library(library), strategies(strategies) {}
 
 			virtual OUT visit(_sp<NODE> node, IN input) {
 				auto strategy = strategies->getStrategy(node);

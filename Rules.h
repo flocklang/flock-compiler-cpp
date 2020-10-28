@@ -32,7 +32,6 @@
 namespace flock {
 	namespace rule {
 		using namespace std;
-		using namespace visitor;
 		namespace types {
 
 			static IDCounter ids;
@@ -43,29 +42,29 @@ namespace flock {
 			class UnaryRule;
 			class CollectionRule;
 
-			template<typename IN, typename OUT>
-			class RuleVisitor;
-
 			class RuleLibrary;
 
 			template<typename IN, typename OUT>
-			using RuleStrategy = NodeStrategy<IN, OUT, Rule, RuleVisitor<IN,OUT>>;
+			class RuleVisitor;
 
 			template<typename IN, typename OUT>
-			using LibraryStrategy = NodeLibraryStrategy<IN, OUT, Rule, RuleVisitor<IN, OUT>, RuleLibrary>;
-			template<typename IN, typename OUT>
-			using LibraryStrategies =  NodeLibraryStrategies<IN, OUT, Rule, RuleStrategy<IN,OUT>, LibraryStrategy<IN,OUT>>;
-			template<typename IN, typename OUT>
-			using WrappingStrategies =  WrappingNodeStrategies<IN, OUT, Rule, RuleStrategy<IN, OUT>, LibraryStrategy<IN, OUT>>;
+			using RuleStrategy = visitor::Strategy<IN, OUT, Rule, RuleVisitor<IN,OUT>>;
 
 			template<typename IN, typename OUT>
-			using WrappingRuleStrategy = WrappingNodeStrategy<IN, OUT, Rule, RuleVisitor<IN, OUT>>;
+			using LibraryStrategy = visitor::LibraryStrategy<IN, OUT, Rule, RuleVisitor<IN, OUT>, RuleLibrary>;
+			template<typename IN, typename OUT>
+			using BaseStrategies = visitor::BaseStrategies<IN, OUT, Rule, RuleStrategy<IN,OUT>, LibraryStrategy<IN,OUT>>;
+			template<typename IN, typename OUT>
+			using WrappingStrategies = visitor::WrappingStrategies<IN, OUT, Rule, RuleStrategy<IN, OUT>, LibraryStrategy<IN, OUT>>;
 
 			template<typename IN, typename OUT>
-			using WrappingLibraryStrategy = WrappingNodeLibraryStrategy<IN, OUT, Rule, RuleVisitor<IN, OUT>, LibraryStrategy<IN, OUT>>;
+			using WrappingRuleStrategy = visitor::WrappingStrategy<IN, OUT, Rule, RuleVisitor<IN, OUT>>;
 
 			template<typename IN, typename OUT>
-			using RuleStrategies = NodeStrategies<IN, OUT, Rule, RuleStrategy<IN, OUT>, LibraryStrategy<IN, OUT>>;
+			using WrappingLibraryStrategy = visitor::WrappingLibraryStrategy<IN, OUT, Rule, RuleVisitor<IN, OUT>, LibraryStrategy<IN, OUT>>;
+
+			template<typename IN, typename OUT>
+			using Strategies = visitor::Strategies<IN, OUT, Rule, RuleStrategy<IN, OUT>, LibraryStrategy<IN, OUT>>;
 			
 
 			/// <summary>
@@ -82,7 +81,7 @@ namespace flock {
 				const int id = ids.next();
 			};
 
-			class RuleLibrary : public NodeLibrary<Rule> {
+			class RuleLibrary : public visitor::Library<Rule> {
 			public:
 
 				_sp <Rule> addSymbol(const string symbolName, _sp <Rule> expression) {
@@ -106,7 +105,7 @@ namespace flock {
 				}
 			protected:
 				// parts are usefull rules, but we are not interested in collecting information on them.
-				NodeLibrary<Rule> parts;
+				visitor::Library<Rule> parts;
 			};
 
 			/// <summary>
@@ -139,9 +138,9 @@ namespace flock {
 			/// <typeparam name="IN"></typeparam>
 			/// <typeparam name="OUT"></typeparam>
 			template<typename IN, typename OUT>
-			class RuleVisitor : public NodeVisitor<IN, OUT,Rule, RuleLibrary, RuleStrategies<IN, OUT>, RuleVisitor<IN,OUT>> {
+			class RuleVisitor : public visitor::Visitor<IN, OUT,Rule, RuleLibrary, Strategies<IN, OUT>, RuleVisitor<IN,OUT>> {
 			public:
-				RuleVisitor(_sp<RuleLibrary> library, _sp<RuleStrategies<IN, OUT>> strategies) : NodeVisitor<IN, OUT, Rule, RuleLibrary, RuleStrategies<IN, OUT>, RuleVisitor<IN, OUT>>(library, strategies) {}
+				RuleVisitor(_sp<RuleLibrary> library, _sp<Strategies<IN, OUT>> strategies) : visitor::Visitor<IN, OUT, Rule, RuleLibrary, Strategies<IN, OUT>, RuleVisitor<IN, OUT>>(library, strategies) {}
 
 
 				virtual OUT visitByName(const string name, IN input) override {

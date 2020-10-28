@@ -17,6 +17,7 @@
 #define FLOCK_COMPILER_SYNTAX_H
 
 #include "Source.h"
+#include "Visitor.h"
 
  ///
  /// Basic Grammar, that allows to employ basic BNF style grammars in language detection.
@@ -25,7 +26,19 @@ namespace flock {
 	namespace syntax {
 		using namespace flock::source;
 		class SyntaxNode;
-		class SyntaxTreeVisitor;
+		template<typename IN, typename OUT>
+		class SyntaxVisitor;
+
+		class SyntaxLibrary;
+
+		template<typename IN, typename OUT>
+		using SyntaxStrategy = visitor::Strategy<IN, OUT, SyntaxNode, SyntaxVisitor<IN, OUT>>;
+
+		template<typename IN, typename OUT>
+		using LibrarySyntaxStrategy = visitor::LibraryStrategy<IN, OUT, SyntaxNode, SyntaxVisitor<IN, OUT>, SyntaxLibrary>;
+		template<typename IN, typename OUT>
+		using SyntaxStrategies = visitor::BaseStrategies<IN, OUT, SyntaxNode, SyntaxStrategy<IN, OUT>, LibrarySyntaxStrategy<IN, OUT>>;
+
 
 
 		class SyntaxNode {
@@ -49,7 +62,7 @@ namespace flock {
 			}
 			_sp<Range> getFullRange() {
 				if (range == nullptr) {
-					range = getChildrenRange();
+					range = getCombinedChildrenRange();
 				}
 				return range;
 			}
@@ -58,13 +71,13 @@ namespace flock {
 			}
 
 			friend std::ostream& operator<<(std::ostream& os, const SyntaxNode& node) {
-				string printRange = node.range ? " : " + node.range->source : "";
+				string printRange = node.range ? ": " + node.range->source : "";
 				os << "{ " << node.type << printRange;
 				if (!node.children.empty()) {
 
 					os << ": ";
 					if (node.children.size() > 1) {
-						os << " [";
+						os << "[";
 					}
 					for (_sp<SyntaxNode> child : node.children) {
 						os << *child;
@@ -82,7 +95,7 @@ namespace flock {
 			_sp_vec<SyntaxNode> children;
 			_sp<SyntaxNode> parent = nullptr;
 
-			_sp<Range> getChildrenRange() {
+			_sp<Range> getCombinedChildrenRange() {
 
 				if (children.empty()) {
 					return nullptr;
@@ -105,4 +118,5 @@ namespace flock {
 		};
 	}
 }
+
 #endif
