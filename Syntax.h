@@ -41,33 +41,51 @@ namespace flock {
 
 
 
-		class SyntaxNode {
+		class SyntaxNode : public enable_shared_from_this<SyntaxNode> {
 		public:
-			SyntaxNode(string type) : type(type) {}
-			SyntaxNode(_sp<SyntaxNode> parent, string type) : type(type), parent(parent) {}
-			SyntaxNode(_sp<SyntaxNode> parent, _sp<Range> range) : type(type), range(range), parent(parent) {}
+			SyntaxNode(string type) : type(type), range(nullptr) {}
+			SyntaxNode(_sp<Range> range) : range(range) {}
+			SyntaxNode(string type, _sp<Range> range) : type(type), range(range) {}
 
-			void append(_sp<SyntaxNode> syntaxNode) {
-				children.push_back(syntaxNode);
+			_sp<SyntaxNode> clone() {
+				_sp<SyntaxNode> me = make_shared<SyntaxNode>(type, range);
+
+				for (_sp<SyntaxNode> child : SyntaxNode::children) {
+					me->append(child->clone());
+				}
+				return me;
 			}
-
 			_sp_vec<SyntaxNode> getChildren() {
 				return children;
-			}
-			void setRange(_sp<Range> newRange) {
-				range = newRange;
 			}
 			_sp<Range> getRange() {
 				return range;
 			}
+			_sp<SyntaxNode> getParent() {
+				return parent;
+			}
+
+			void setParent(_sp<SyntaxNode> parentToSet) {
+				parent = parentToSet;
+			}
+			void setRange(_sp<Range> newRange) {
+				range = newRange;
+			}
+
+			void append(_sp<SyntaxNode> syntaxNode) {
+				children.push_back(syntaxNode);
+				syntaxNode->setParent(this->shared_from_this());
+			}
+
+			/// <summary>
+			/// TODO probably remove
+			/// </summary>
+			/// <returns></returns>
 			_sp<Range> getFullRange() {
 				if (range == nullptr) {
 					range = getCombinedChildrenRange();
 				}
 				return range;
-			}
-			_sp<SyntaxNode> getParent() {
-				return parent;
 			}
 
 			friend std::ostream& operator<<(std::ostream& os, const SyntaxNode& node) {
@@ -95,6 +113,11 @@ namespace flock {
 			_sp_vec<SyntaxNode> children;
 			_sp<SyntaxNode> parent = nullptr;
 
+
+			/// <summary>
+			/// TODO probably remove
+			/// </summary>
+			/// <returns></returns>
 			_sp<Range> getCombinedChildrenRange() {
 
 				if (children.empty()) {

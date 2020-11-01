@@ -24,79 +24,91 @@
 #include <memory>
 
 namespace flock {
-    namespace supplier {
+	namespace supplier {
 
-        template<typename Contents, typename R = _sp_vec<Contents>>
-        class CachedSupplier : public  Supplier<_sp<Contents>> {
-        public:
+		template<typename Contents, typename R = _sp_vec<Contents>>
+		class CachedSupplier : public  Supplier<_sp<Contents>> {
+		public:
 
-            virtual R pollRange(const int amount = 1, const int startIdx = 0) = 0;
+			virtual R pollRange(const int amount = 1, const int startIdx = 0) {
+				return pollRangeBetween(startIdx, startIdx+amount);
+			}
 
-            bool isEnd(int idx) {
-                return poll(idx) == nullptr;
-            }
+			/// <summary>
+			/// 
+			/// </summary>
+			/// <param name="startIdx">Start Inclusive</param>
+			/// <param name="endIdx"> End Exclusive</param>
+			/// <returns></returns>
+			virtual R pollRangeBetween(const int startIdx = 0, const int endIdx = 1) {
+				return pollRange(endIdx - startIdx, startIdx);
+			}
 
-            _sp<Contents> poll(const int idx = 0) {
-                if (idx < 0) {
-                    return nullptr;
-                }
-                for (int i = store.size(); i <= idx; i++) {
-                    auto value = this->supply();
-                    if (!value) {
-                        return nullptr;
-                    }
+			bool isEnd(int idx) {
+				return poll(idx) == nullptr;
+			}
 
-                    store.push_back(value);
-                    // why bother looking up if we have fetched it.
-                    if (i == idx) {
-                        return value;
-                    }
-                }
-                return store.at(idx);
-            };
+			_sp<Contents> poll(const int idx = 0) {
+				if (idx < 0) {
+					return nullptr;
+				}
+				for (int i = store.size(); i <= idx; i++) {
+					auto value = this->supply();
+					if (!value) {
+						return nullptr;
+					}
 
-            _sp<Contents> pop() {
-                if (store.empty()) {
-                    auto value = this->supply();
-                    if (!value) {
-                        return nullptr;
-                    }
-                    // no need to store as it will be poped anyway.
-                    return value;
-                }
-                else {
-                    auto value = store.front();
-                    store.pop_front();
-                    return value;
-                }
-            };
+					store.push_back(value);
+					// why bother looking up if we have fetched it.
+					if (i == idx) {
+						return value;
+					}
+				}
+				return store.at(idx);
+			};
 
-            R popRange(const int amount = 1) {
-                auto range = pollRange(amount);
-                if (amount > 0 && !store.empty()) {
-                    store.erase(store.begin(), std::min(store.begin() + amount, store.end()));
-                }
-                return range;
-            };
-        protected:
-            std::deque<_sp<Contents>> store;
-        };
+			_sp<Contents> pop() {
+				if (store.empty()) {
+					auto value = this->supply();
+					if (!value) {
+						return nullptr;
+					}
+					// no need to store as it will be poped anyway.
+					return value;
+				}
+				else {
+					auto value = store.front();
+					store.pop_front();
+					return value;
+				}
+			};
 
-        template<typename Contents>
-        class CachedVectorSupplier : public CachedSupplier<Contents> {
-        public:
-            _sp_vec<Contents> pollRange(const int amount = 1, const int startIdx = 0) override {
-                _sp_vec<Contents> vecStore;
-                for (int nextId = startIdx; nextId < startIdx + amount; nextId++) {
-                    _sp<Contents> option = this->poll(nextId);
-                    if (!option) {
-                        return vecStore;
-                    }
-                    vecStore.push_back(option);
-                }
-                return vecStore;
-            };
-        };
-    }
+			R popRange(const int amount = 1) {
+				auto range = pollRange(amount);
+				if (amount > 0 && !store.empty()) {
+					store.erase(store.begin(), min(store.begin() + amount, store.end()));
+				}
+				return range;
+			};
+		protected:
+			std::deque<_sp<Contents>> store;
+		};
+
+		template<typename Contents>
+		class CachedVectorSupplier : public CachedSupplier<Contents> {
+		public:
+			virtual _sp_vec<Contents> pollRangeBetween(const int startIdx = 0, const int endIdx = 1) override {
+				_sp_vec<Contents> vecStore;
+				for (int nextId = startIdx; nextId < endIdx; nextId++) {
+					_sp<Contents> option = this->poll(nextId);
+					if (!option) {
+						return vecStore;
+					}
+					vecStore.push_back(option);
+				}
+				return vecStore;
+			};
+		};
+	}
 }
 #endif

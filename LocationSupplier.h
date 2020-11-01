@@ -28,13 +28,13 @@ namespace flock {
 		public:
 			LocationSupplier(_sp<Supplier<int>> charSupplier) : charSupplier(charSupplier) {}
 
-			_sp<Range> pollRange(const int amount = 1, const int startIdx = 0) override {
+			virtual _sp<Range> pollRangeBetween(const int startIdx = 0, const int endIdx = 1) override {
 				auto option = poll(startIdx);
 				if (!option) {
 					return nullptr;
 				}
 				Range* range = new Range(option);
-				for (int nextId = startIdx + 1; nextId < startIdx + amount; nextId++) {
+				for (int nextId = startIdx + 1; nextId < endIdx; nextId++) {
 					auto option = poll(nextId);
 
 					if (!option) {

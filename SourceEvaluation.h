@@ -16,6 +16,7 @@
 #ifndef FLOCK_COMPILER_SOURCE_EVALUATION_H
 #define FLOCK_COMPILER_SOURCE_EVALUATION_H
 
+#include <iostream>
 #include "Rules.h"
 #include "LogicRules.h"
 #include "StringRules.h"
@@ -34,79 +35,129 @@ namespace flock {
 		using namespace flock::rule::history;
 		namespace evaluator {
 			using Tokens = _sp<supplier::CachedSupplier<Location, _sp<Range>>>;
-			using Input = pair<int, Tokens>;
-			using Output = pair<int, _sp<SyntaxNode>>;
-			using Store = Output;
+			struct Input;
+			struct Output;
+			class SyntaxCollector;
+			class SyntaxStrategies;
+			class NonSyntaxRuleStrategy;
+			class SyntaxRuleStrategy;
 			using EvaluationVisitor = RuleVisitor<Input, Output>;
 			using Key = int;
-			const static Output FAILURE = make_pair(-1, nullptr);
 
-			class EvaluationMixins : public BaseMixinsCombined<Input, Output>, public LogicMixinsCombined<Input, Output>, public HistoryMixinsCombined<Input, Output, Key, Store> {
+			struct Input {
+				Input(const Tokens tokens, const int idx) : idx(idx), tokens(tokens) {}
+				Input(const Tokens tokens) : idx(0), tokens(tokens) {}
+				Input(const Input& other) : idx{ other.idx }, tokens(other.tokens)
+				{ }
+
+				Input& operator=(const Input& other)
+				{
+					if (&other != this) {
+						idx = other.idx;
+						tokens = other.tokens;
+					}
+					return *this;
+				}
+				Input next(const int idx) {
+					return Input(tokens, idx);
+				}
+				int idx;
+				Tokens tokens;
+			};
+
+			struct Output {
+				Output(int idx, _sp_vec<SyntaxNode>	syntaxNodes) : idx(idx), syntaxNodes(syntaxNodes) {}
+				Output(int idx, _sp<SyntaxNode>	syntaxNode) : idx(idx), syntaxNodes({ syntaxNode }) {}
+				Output(int idx) : idx(idx) {}
+				bool isFailure() {
+					return idx < 0;
+				}
+				bool isSuccess() {
+					return idx >= 0;
+				}
+				bool hasNodes() {
+					return !syntaxNodes.empty();
+				}
+				int idx;
+				_sp_vec<SyntaxNode>	syntaxNodes;
+			};
+
+			const static Output FAILURE = Output(-1);
+
+			class EvaluationMixins : public BaseMixinsCombined<Input, Output>, public LogicMixinsCombined<Input, Output>, public HistoryMixinsCombined<Input, Output, Key> {
 			public:
 				virtual bool isFailure(Output out) override {
-					return out == FAILURE;
+					return out.isFailure();
 				}
 				virtual Output makeFailure() override {
 					return FAILURE;
 				}
 				virtual Output makeSuccess(Input input) override {
-					return make_pair(input.first + 1, nullptr);
+					return Output(input.idx + 1);
 				}
 				virtual Output makeEmptySuccess(Input input) override {
-					return make_pair(input.first, nullptr);
+					return Output(input.idx);
 				}
 				virtual bool isEnd(Input input) override {
-					Tokens tokens = input.second;
-					return tokens->isEnd(input.first);
+					Tokens tokens = input.tokens;
+					return tokens->isEnd(input.idx);
 				}
 				virtual Input nextInFromPrevious(Input previousInput, Output previousOutput) override {
-					return make_pair(previousOutput.first, previousInput.second);
+					return previousInput.next(previousOutput.idx);
+				}
+				virtual Output joinOutputs(Output first, Output second) override {
+					if (first.hasNodes()) {
+						if (second.hasNodes()) {
+							_sp_vec<SyntaxNode> nodes;
+							nodes.reserve(first.syntaxNodes.size() + second.syntaxNodes.size()); // preallocate memory
+							nodes.insert(nodes.end(), first.syntaxNodes.begin(), first.syntaxNodes.end());
+							nodes.insert(nodes.end(), second.syntaxNodes.begin(), second.syntaxNodes.end());
+							return Output(second.idx, nodes);
+						}
+						else {
+							return Output(second.idx, first.syntaxNodes);
+						}
+					}
+					else {
+						return second;
+					}
 				}
 				virtual Key getKeyForInput(Input input) override {
-					const int idx = input.first;
-					const Tokens tokens = input.second;
+					const int idx = input.idx;
+					const Tokens tokens = input.tokens;
 					auto location = tokens->poll(idx);
 					if (location) {
 						return location->position;
 					}
 					return -1;
 				}
-
-				virtual Output getOutFromStorage(Store store) override {
-					return store;
-				}
-				virtual Store getStorageFromOut(_sp<RuleVisitor<Input, Output>> baseVisitor, Input input, Output output) override {
-					return output;
-				}
 			};
-
 
 			class HasCharRuleStrategy : public HasValueRuleStrategy<int, Input, Output> {
 			public:
 				HasCharRuleStrategy(_sp<BaseMixinsCombined<Input, Output>> mixins) : HasValueRuleStrategy<int, Input, Output>(mixins) {}
 
 				virtual Output matches(int value, Input input) override {
-					const int idx = input.first;
-					const Tokens tokens = input.second;
+					const int idx = input.idx;
+					const Tokens tokens = input.tokens;
 					auto location = tokens->poll(idx);
 					if (location && value == location->character) {
-						return make_pair(idx + 1, nullptr);
+						return Output(idx + 1);
 					}
 					return FAILURE;
 				}
 			};
-
 
 			class HasStringRuleStrategy : public HasValueRuleStrategy<string, Input, Output> {
 			public:
 				HasStringRuleStrategy(_sp<BaseMixinsCombined<Input, Output>> mixins) : HasValueRuleStrategy<string, Input, Output>(mixins) {}
 
 				virtual Output matches(string value, Input input) override {
-					const int idx = input.first;
-					const Tokens tokens = input.second;
+					const int idx = input.idx;
+					const Tokens tokens = input.tokens;
 					auto range = tokens->pollRange(value.size(), idx);
 					if (range && value == range->source) {
-						return make_pair(idx + value.size(), nullptr);
+						return Output(idx + value.size());
 					}
 					return FAILURE;
 				}
@@ -125,12 +176,12 @@ namespace flock {
 
 					const int start = values.at(0);
 					const int end = values.at(1);
-					const int idx = input.first;
-					const Tokens tokens = input.second;
+					const int idx = input.idx;
+					const Tokens tokens = input.tokens;
 					auto location = tokens->poll(idx);
 
 					if (location && start <= location->character && end >= location->character) {
-						return make_pair(idx + 1, nullptr);
+						return Output(idx + 1);
 					}
 					return FAILURE; // return failure.
 				}
@@ -145,87 +196,83 @@ namespace flock {
 					string name = "";
 
 					for (auto rule = symbolNames.begin(); rule != symbolNames.end(); ++rule) {
-						Output newOut = visitor->visitByName(*rule, input);
-						if (newOut.first > out.first) {
-							out = newOut;
-							name = *rule;
+						try {
+							Output newOut = visitor->visitByName(*rule, input);
+							if (newOut.idx > out.idx) {
+								name = *rule;
+
+								_sp<SyntaxNode> syntaxNode = make_shared<SyntaxNode>(name, input.tokens->pollRangeBetween(input.idx, newOut.idx));
+								if (newOut.hasNodes()) {
+									for (_sp<SyntaxNode> child : newOut.syntaxNodes) {
+										if (child) {
+											syntaxNode->append(child->clone());
+										}
+									}
+								}
+								out = Output(newOut.idx, syntaxNode);
+							}
+						}
+						catch (string exc) {
+							cout << "\nexception was thrown: " << exc << "\n";
 						}
 					}
-					if (out.first >= 0) {
-						auto evaluated = input.second->popRange(out.first - input.first);
+					if (out.isSuccess()) {
+						auto evaluated = input.tokens->popRange(out.idx - input.idx);
 					}
 					return out; // return the first as a success
 				};
 			};
 
-			const static _sp<EvaluationMixins> evaluationMixins = make_shared<EvaluationMixins>();
 
-			
-
-			class CollectingRuleVisitor : public RuleVisitor<Input, Output> {
+			class SyntaxAliasRuleStrategy : public  WrappingRuleStrategy<Input, Output> {
 			public:
-				CollectingRuleVisitor(_sp<RuleLibrary> library, _sp<Strategies<Input, Output>> strategies) : RuleVisitor<Input, Output>(library, strategies) {}
+				SyntaxAliasRuleStrategy(_sp<RuleStrategy <Input, Output>> wrapped) : WrappingRuleStrategy<Input, Output>(wrapped) {}
 
-				_sp<SyntaxNode> getSyntaxNode() {
-					return syntaxNode;
-				}
-
-				_sp<SyntaxNode> attachNode(_sp<SyntaxNode> childNode) {
-					if (this->syntaxNode) {
-						this->syntaxNode->append(childNode);
-						return childNode;
-					}
-					setNode(childNode);
-					return childNode;
-				}
-				_sp< SyntaxNode> attachNode(_sp<Range> range) {
-					if (range) {
-						return attachNode(make_shared<SyntaxNode>(this->syntaxNode, range));
-					}
-					return nullptr;
-				}
-				//SyntaxNode(string type) : type(type) {}
-				void setNode(_sp<SyntaxNode> childNode) {
-					this->syntaxNode = childNode;
-				}
-
-				virtual Output visitSymbol(string name, _sp<Rule> rule, Input input) override {
-					_sp<SyntaxNode> current = this->syntaxNode;
-					_sp<SyntaxNode> next = make_shared<SyntaxNode>(current, name);
-					setNode(next);
-					Output out = this->visit(rule, input);
-					if (out.first >= 0) {
-						if (next->getChildren().empty()) {
-							_sp<Range> range = input.second->pollRange(out.first - input.first, input.first);
-							next->setRange(range);
+				virtual Output accept(_sp<RuleVisitor<Input, Output>> visitor, _sp<Rule> baseRule, Input input) override {
+					const auto rule = std::dynamic_pointer_cast<AliasRule>(baseRule);
+					Output output = wrapped->accept(visitor, rule, input);
+					if (output.isSuccess() && visitor->getSymbol(rule->getAlias())) {
+						_sp<SyntaxNode> syntaxNode = make_shared<SyntaxNode>(rule->getAlias(), input.tokens->pollRangeBetween(input.idx, output.idx));
+						if (output.hasNodes()) {
+							for (_sp<SyntaxNode> child : output.syntaxNodes) {
+								if (child) {
+									syntaxNode->append(child->clone());
+								}
+							}
 						}
-						if (current) {
-							setNode(current);
-							attachNode(next);
-						}
-						else {
-							setNode(next);
-						}
-
-						return make_pair(out.first, next);
+						return Output(output.idx, syntaxNode);
 					}
-					else {
-						setNode(current);
-					}
-					return out;
+					return output;
 				}
-				virtual void clear() override {
-					syntaxNode = nullptr;
-				}
-			protected:
-				_sp<SyntaxNode> syntaxNode;
 			};
 
+			class SyntaxStrategies : public types::WrappingStrategies<Input, Output> {
+			public:
+				SyntaxStrategies(_sp<types::Strategies<Input, Output>> strategies) :
+					types::WrappingStrategies<Input, Output>(strategies) {}
 
+				virtual void addStrategy(const int type, _sp<RuleStrategy<Input, Output>> strategy) override {
+					switch (type) {
+					case LogicRules::Alias:
+						getWrappedStratagies()->addStrategy(type, make_shared<SyntaxAliasRuleStrategy>(strategy));
+						return;
+					default:
+						getWrappedStratagies()->addStrategy(type, strategy);
+					}
+				}
+
+
+				virtual void clear() override {
+				}
+			protected:
+			};
+
+			const static _sp<EvaluationMixins> evaluationMixins = make_shared<EvaluationMixins>();
 
 			static _sp<Strategies<Input, Output>> evaluationStrategies() {
-				auto strategies = cache<Input, Output, Key, Store>(evaluationMixins);
-
+				auto baseStrategies = make_shared<BaseStrategies<Input, Output>>();
+				auto strategies = cache<Input, Output, Key>(make_shared< SyntaxStrategies>(baseStrategies), evaluationMixins);
+				//auto strategies = make_shared<SyntaxStrategies>(baseStrategies);
 				addLogicStrategies<Input, Output>(evaluationMixins, strategies);
 				strategies->setLibraryStrategy(make_shared<EvaluationLibraryStrategy>());
 				strategies->addStrategy(StringRules::EqualChar, make_shared<HasCharRuleStrategy>(evaluationMixins));

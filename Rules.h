@@ -48,12 +48,12 @@ namespace flock {
 			class RuleVisitor;
 
 			template<typename IN, typename OUT>
-			using RuleStrategy = visitor::Strategy<IN, OUT, Rule, RuleVisitor<IN,OUT>>;
+			using RuleStrategy = visitor::Strategy<IN, OUT, Rule, RuleVisitor<IN, OUT>>;
 
 			template<typename IN, typename OUT>
 			using LibraryStrategy = visitor::LibraryStrategy<IN, OUT, Rule, RuleVisitor<IN, OUT>, RuleLibrary>;
 			template<typename IN, typename OUT>
-			using BaseStrategies = visitor::BaseStrategies<IN, OUT, Rule, RuleStrategy<IN,OUT>, LibraryStrategy<IN,OUT>>;
+			using BaseStrategies = visitor::BaseStrategies<IN, OUT, Rule, RuleStrategy<IN, OUT>, LibraryStrategy<IN, OUT>>;
 			template<typename IN, typename OUT>
 			using WrappingStrategies = visitor::WrappingStrategies<IN, OUT, Rule, RuleStrategy<IN, OUT>, LibraryStrategy<IN, OUT>>;
 
@@ -65,7 +65,12 @@ namespace flock {
 
 			template<typename IN, typename OUT>
 			using Strategies = visitor::Strategies<IN, OUT, Rule, RuleStrategy<IN, OUT>, LibraryStrategy<IN, OUT>>;
-			
+
+			struct LibraryAddStrategy {
+				virtual _sp<Rule> addNode(_sp<visitor::Library<Rule>> library, const string symbolName, _sp <Rule> expression) {
+					return library->addNode(symbolName, expression);
+				}
+			};
 
 			/// <summary>
 			/// All rules have a unique id on instantiation.
@@ -81,31 +86,40 @@ namespace flock {
 				const int id = ids.next();
 			};
 
-			class RuleLibrary : public visitor::Library<Rule> {
+			class RuleLibrary : public visitor::Library<Rule>, public std::enable_shared_from_this<RuleLibrary> {
 			public:
+				RuleLibrary(_sp<LibraryAddStrategy> addStrategy) : addStrategy(addStrategy) {}
+				RuleLibrary() : RuleLibrary(make_shared<LibraryAddStrategy>()) {}
 
-				_sp <Rule> addSymbol(const string symbolName, _sp <Rule> expression) {
-					return addNode(symbolName, expression);
+				_sp <Rule> addSymbol(const string symbolName, _sp<Rule> expression) {
+					return addSymbol(symbolName, addStrategy, expression);
 				}
-				_sp <Rule> addPart(const string partName, _sp <Rule> expression) {
-					return parts.addNode(partName, expression);
+				_sp <Rule> addPart(const string partName, _sp<Rule> expression) {
+					return addPart(partName, addStrategy, expression);
+				}
+				_sp <Rule> addSymbol(const string symbolName, _sp< LibraryAddStrategy> addStrategy, _sp<Rule> expression) {
+					return addStrategy->addNode(this->shared_from_this(), symbolName, expression);
+				}
+				_sp <Rule> addPart(const string partName, _sp< LibraryAddStrategy> addStrategy, _sp<Rule> expression) {
+					return addStrategy->addNode(parts, partName, expression);
 				}
 
 				_sp<Rule> getSymbol(const string symbolName) {
 					return getNode(symbolName);
 				}
 				_sp<Rule> getPart(const string partName) {
-					return  parts.getNode(partName);
+					return  parts->getNode(partName);
 				}
 				vector<string> getSymbolNames() {
 					return getNames();
 				}
 				vector<string> getPartNames() {
-					return parts.getNames();
+					return parts->getNames();
 				}
 			protected:
 				// parts are usefull rules, but we are not interested in collecting information on them.
-				visitor::Library<Rule> parts;
+				_sp<visitor::Library<Rule>> parts = make_shared<visitor::Library<Rule>>();
+				_sp<LibraryAddStrategy> addStrategy;
 			};
 
 			/// <summary>
@@ -124,7 +138,7 @@ namespace flock {
 				virtual bool isEnd(IN input) = 0;
 			};
 
-			template<typename IN, typename OUT, typename MIX = BaseMixinsCombined<IN,OUT>>
+			template<typename IN, typename OUT, typename MIX = BaseMixinsCombined<IN, OUT>>
 			class MixinsRuleStrategy : public RuleStrategy<IN, OUT> {
 			public:
 				MixinsRuleStrategy(const _sp<MIX> mixins) : mixins(mixins) {}
@@ -138,12 +152,12 @@ namespace flock {
 			/// <typeparam name="IN"></typeparam>
 			/// <typeparam name="OUT"></typeparam>
 			template<typename IN, typename OUT>
-			class RuleVisitor : public visitor::Visitor<IN, OUT,Rule, RuleLibrary, Strategies<IN, OUT>, RuleVisitor<IN,OUT>> {
+			class RuleVisitor : public visitor::Visitor<IN, OUT, Rule, RuleLibrary, Strategies<IN, OUT>, RuleVisitor<IN, OUT>> {
 			public:
 				RuleVisitor(_sp<RuleLibrary> library, _sp<Strategies<IN, OUT>> strategies) : visitor::Visitor<IN, OUT, Rule, RuleLibrary, Strategies<IN, OUT>, RuleVisitor<IN, OUT>>(library, strategies) {}
 
 
-				virtual OUT visitByName(const string name, IN input) override {
+				virtual OUT visitByName(const string name, const IN input) override {
 					auto symRule = getSymbol(name);
 					if (symRule) {
 						return visitSymbol(name, symRule, input);
@@ -153,11 +167,17 @@ namespace flock {
 					}
 				}
 
-				virtual OUT visitPart(string name, _sp<Rule> rule, IN input) {
-					return this->visit(rule, input);
+				virtual OUT visitPart(const string name, const _sp<Rule> rule, const IN input) {
+					if (rule) {
+						return this->visit(rule, input);
+					}
+					throw string("Rule Part " + name + " does not exist");
 				}
-				virtual OUT visitSymbol(string name, _sp<Rule> rule, IN input) {
-					return this->visit(rule, input);
+				virtual OUT visitSymbol(const string name, const _sp<Rule> rule, const IN input) {
+					if (rule) {
+						return this->visit(rule, input);
+					}
+					throw string("Rule Symbol " + name + " does not exist");
 				}
 
 				virtual _sp<Rule> getPart(const string partName) {
@@ -167,6 +187,7 @@ namespace flock {
 				virtual _sp<Rule> getSymbol(const string symbolName) {
 					return library->getSymbol(symbolName);
 				}
+			protected:
 			};
 
 			class TerminalRule : public Rule {
@@ -238,7 +259,7 @@ namespace flock {
 
 					for (T value : values) {
 						OUT match = matches(value, input);
-						if(!this->mixins->isFailure(match)) {
+						if (!this->mixins->isFailure(match)) {
 							return match;
 						}
 					}

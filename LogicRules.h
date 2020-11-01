@@ -19,6 +19,7 @@
 #include "Rules.h"
 #include <vector>
 #include <string>
+#include <iostream>
 
  ///
  /// Basic Grammar, that allows to employ basic BNF style grammars in language detection.
@@ -82,22 +83,6 @@ namespace flock {
 		};
 
 		/// <summary>
-		/// Asks the visitor too locate the alias rule, and then visit that.
-		/// Normally this would be used for actual evaluation, rather than printing the rule tree.
-		/// </summary>
-		/// <typeparam name="IN"></typeparam>
-		/// <typeparam name="OUT"></typeparam>
-		template<typename IN, typename OUT>
-		class AliasRuleStrategy : public RuleStrategy <IN, OUT> {
-		public:
-			virtual OUT accept(_sp<RuleVisitor<IN, OUT>> visitor, _sp<Rule> baseRule, IN input) override {
-				const auto aliasRule = std::dynamic_pointer_cast<AliasRule>(baseRule);
-				return visitor->visitByName(aliasRule->getAlias(), input);
-			}
-		};
-
-
-		/// <summary>
 		/// Helper class to save on the typing.
 		/// </summary>
 		/// <typeparam name="IN"></typeparam>
@@ -106,12 +91,39 @@ namespace flock {
 		class LogicMixinsCombined : public BaseMixinsCombined<IN, OUT> {
 		public:
 			virtual IN nextInFromPrevious(IN previousInput, OUT previousOutput) = 0;
+			virtual OUT joinOutputs(OUT currentOut, OUT nextOut) {
+				return nextOut;
+			}
 		};
 
 		template<typename IN, typename OUT>
 		class LogicRuleStrategy : public MixinsRuleStrategy<IN, OUT, LogicMixinsCombined<IN, OUT>> {
 		public:
 			LogicRuleStrategy(const _sp<LogicMixinsCombined<IN, OUT>> mixins) : MixinsRuleStrategy<IN, OUT, LogicMixinsCombined<IN, OUT>>(mixins) {}
+		};
+
+
+		/// <summary>
+		/// Asks the visitor too locate the alias rule, and then visit that.
+		/// Normally this would be used for actual evaluation, rather than printing the rule tree.
+		/// </summary>
+		/// <typeparam name="IN"></typeparam>
+		/// <typeparam name="OUT"></typeparam>
+		template<typename IN, typename OUT>
+		class AliasRuleStrategy : public LogicRuleStrategy <IN, OUT> {
+		public:
+			AliasRuleStrategy(const _sp<LogicMixinsCombined<IN, OUT>> mixins) : LogicRuleStrategy<IN, OUT>(mixins) {}
+			virtual OUT accept(_sp<RuleVisitor<IN, OUT>> visitor, _sp<Rule> baseRule, IN input) override {
+				const auto aliasRule = std::dynamic_pointer_cast<AliasRule>(baseRule);
+
+				try {
+					return visitor->visitByName(aliasRule->getAlias(), input);
+				}
+				catch (string exc) {
+					cout << "\nexception was thrown: " << exc << "\n";
+					return this->mixins->makeFailure();
+				}
+			}
 		};
 
 		template<typename IN, typename OUT>
@@ -206,10 +218,11 @@ namespace flock {
 				}
 				for (auto rule = begin(children) + 1; rule != end(children); ++rule) {
 					currentInput = this->mixins->nextInFromPrevious(currentInput, currentOut);
-					currentOut = visitor->visit((*rule), currentInput);
+					const OUT nextOut = visitor->visit((*rule), currentInput);
 					if (this->mixins->isFailure(currentOut)) {
 						return this->mixins->makeFailure(); // is a failure
 					}
+					currentOut = this->mixins->joinOutputs(currentOut, nextOut);
 				}
 				return currentOut; // return the combined as a success.
 			}
@@ -275,10 +288,12 @@ namespace flock {
 
 				for (int i = 1; i < min; i++) {
 					currentIn = this->mixins->nextInFromPrevious(currentIn, currentOut);
-					currentOut = visitor->visit(child, currentIn);
+					const OUT nextOut = visitor->visit(child, currentIn);
 					if (this->mixins->isFailure(currentOut)) {
 						return this->mixins->makeFailure();
 					}
+
+					currentOut = this->mixins->joinOutputs(currentOut, nextOut);
 				}
 				if (max > 0) {
 					for (int i = min; i < max + 1; i++) {
@@ -288,7 +303,7 @@ namespace flock {
 						if (this->mixins->isFailure(nextOut)) {
 							return currentOut;
 						}
-						currentOut = nextOut;
+						currentOut = this->mixins->joinOutputs(currentOut, nextOut);
 					}
 					// we have gone past the maximum
 					return this->mixins->makeFailure();
@@ -300,7 +315,7 @@ namespace flock {
 						if (this->mixins->isFailure(nextOut)) {
 							return currentOut;
 						}
-						currentOut = nextOut;
+						currentOut = this->mixins->joinOutputs(currentOut, nextOut);
 					}
 				}
 			}
@@ -368,7 +383,7 @@ namespace flock {
 			strategies->addStrategy(LogicRules::Optional, make_shared<OptionalRuleStrategy<IN, OUT>>(mixins));
 
 			strategies->addStrategy(LogicRules::Repeat, make_shared<RepeatRuleStrategy<IN, OUT>>(mixins));
-			strategies->addStrategy(LogicRules::Alias, make_shared<AliasRuleStrategy<IN, OUT>>());
+			strategies->addStrategy(LogicRules::Alias, make_shared<AliasRuleStrategy<IN, OUT>>(mixins));
 
 			strategies->addStrategy(LogicRules::Sequence, make_shared<SeqRuleStrategy<IN, OUT>>(mixins));
 			strategies->addStrategy(LogicRules::Or, make_shared<OrRuleStrategy<IN, OUT>>(mixins));
@@ -466,36 +481,59 @@ namespace flock {
 			return BUT(SEQ(rules));
 		}
 		static _sp<Rule> RULE(const string alias) {
-			switch (alias.back()) {
-			case '*': {
-				string name = alias.substr(0, alias.length() - 1);
-				_sp<Rule> grammarRule = make_shared<AliasRule>(name);
-				return REP(grammarRule);
-			}
-			case '+': {
-				string name = alias.substr(0, alias.length() - 1);
-				_sp<Rule> grammarRule = make_shared<AliasRule>(name);
-				return SEQ(grammarRule, REP(grammarRule));
-			}
-			case '?': {
-				string name = alias.substr(0, alias.length() - 1);
-				_sp<Rule> grammarRule = make_shared<AliasRule>(name);
-				return OPT(grammarRule);
-
-			}
-			case '-': {
-				string name = alias.substr(0, alias.length() - 1);
-				_sp<Rule> grammarRule = make_shared<AliasRule>(name);
-				return BUT(grammarRule);
-			}
-
-			default: {
-				return make_shared<AliasRule>(alias);
-			}
-
-			}
+			return make_shared<AliasRule>(alias);
 		}
 
+		struct UnwrapAddStrategy : public LibraryAddStrategy {
+			virtual _sp<Rule> addNode(_sp<visitor::Library<Rule>> library, const string name, _sp <Rule> expression) override {
+				string alias = name;
+				bool rep = false;
+				bool rep1 = false;
+				bool opt = false;
+				bool but = false;
+				bool notDone = true;
+				while (notDone) {
+					switch (alias.back()) {
+					case '*':
+						rep = true;
+						alias = alias.substr(0, alias.length() - 1);
+						break;
+					case '+':
+						rep1 = true;
+						alias = alias.substr(0, alias.length() - 1);
+						break;
+					case '?':
+						opt = true;
+						alias = alias.substr(0, alias.length() - 1);
+						break;
+					case '-':
+						but = true;
+						alias = alias.substr(0, alias.length() - 1);
+						break;
+					default:
+						notDone = false;
+					}
+				}
+				_sp<Rule> grammarRule = make_shared<AliasRule>(alias);
+				if (rep) {
+					library->addNode(alias +"*", REP(grammarRule));
+				}
+				if (rep1) {
+					library->addNode(alias + "+", SEQ(grammarRule, REP(grammarRule)));
+				}
+				if (rep1) {
+					library->addNode(alias + "?", OPT(grammarRule));
+				}
+				if (rep1) {
+					library->addNode(alias + "-", BUT(grammarRule));
+				}
+				return library->addNode(alias, expression);
+			}
+		};
+
+		static _sp< UnwrapAddStrategy> unwrap() {
+			return make_shared< UnwrapAddStrategy>();
+		}
 		static _sp<Rule> UNTIL(_sp<Rule> rule) {
 			return REP(BUT(rule));
 		}

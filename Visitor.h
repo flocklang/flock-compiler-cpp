@@ -39,13 +39,12 @@ namespace flock {
 
 		template<typename IN, typename OUT, typename NODE, typename VISITOR>
 		class Strategy;
-		template<typename IN, typename OUT, typename NODE, typename VISITOR , typename LIBRARY >
+		template<typename IN, typename OUT, typename NODE, typename VISITOR, typename LIBRARY >
 		class LibraryStrategy;
-		template<typename IN, typename OUT, typename NODE, typename STRATEGY , typename LIBRARY_STRATEGY >
+		template<typename IN, typename OUT, typename NODE, typename STRATEGY, typename LIBRARY_STRATEGY >
 		class Strategies;
-		template<typename IN, typename OUT, typename NODE, typename STRATEGY , typename LIBRARY_STRATEGY >
+		template<typename IN, typename OUT, typename NODE, typename STRATEGY, typename LIBRARY_STRATEGY >
 		class BaseStrategies;
-
 
 		template<typename NODE>
 		class Library {
@@ -187,7 +186,7 @@ namespace flock {
 		/// <param name="wrapped"></param>
 		/// <returns></returns>
 		template<typename IN, typename OUT, typename NODE, typename VISITOR, typename LIBRARY>
-		class WrappingLibraryStrategy : public LibraryStrategy <IN, OUT, NODE,  VISITOR,  LIBRARY> {
+		class WrappingLibraryStrategy : public LibraryStrategy <IN, OUT, NODE, VISITOR, LIBRARY> {
 		public:
 			WrappingLibraryStrategy(_sp<LibraryStrategy <IN, OUT, NODE, VISITOR, LIBRARY>> wrapped) : wrapped(wrapped) {}
 
@@ -215,7 +214,10 @@ namespace flock {
 
 			virtual OUT visitByName(const string name, IN input) {
 				_sp<NODE> node = getNode(name);
-				return this->visit(node, input);
+				if (node) {
+					return this->visit(node, input);
+				}
+				throw string("Node " + name + " does not exist");
 			}
 
 			virtual OUT begin(IN input) {
@@ -228,6 +230,13 @@ namespace flock {
 			}
 
 			virtual void clear() {
+			}
+			_sp<LIBRARY> getLibrary() {
+				return library;
+			}
+
+			_sp<STRATEGIES> getStrategies() {
+				return strategies;
 			}
 		protected:
 			_sp<LIBRARY> library;

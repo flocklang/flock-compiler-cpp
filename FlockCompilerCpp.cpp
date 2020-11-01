@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-// FlockCompilerCpp.cpp : This file contains the 'main' function. Program execution begins and ends there.
- // Fixes for specific compilers and IDEs go in here, try not to polute the rest of the code.
+ // FlockCompilerCpp.cpp : This file contains the 'main' function. Program execution begins and ends there.
+  // Fixes for specific compilers and IDEs go in here, try not to polute the rest of the code.
 #include "CompilerFix.h"
 
 #include "Util.h"
@@ -36,38 +36,38 @@ using namespace flock::rule;
 using namespace flock::rule::types;
 
 static string printRules(_sp<RuleLibrary> library) {
-	_sp<BaseStrategies<printer::Input, printer::Output>> strategies = printer::printStrategies();
+	_sp<BaseStrategies<printer::ebnf::Input, printer::ebnf::Output>> strategies = printer::ebnf::printStrategies();
 
-	_sp<printer::PrintVisitor>  visitor = make_shared<printer::PrintVisitor>(library, strategies);
-	string value = visitor->begin(printer::BracketHints());
+	_sp<printer::ebnf::PrintVisitor>  visitor = make_shared<printer::ebnf::PrintVisitor>(library, strategies);
+	string value = visitor->begin(printer::ebnf::BracketHints());
 	return value;
 }
 
 
 
-static void MainLoop( _sp<RuleLibrary> library) {
+static void MainLoop(_sp<RuleLibrary> library) {
 	_sp<ConsoleCharSupplier> consoleSupplier = make_shared<ConsoleCharSupplier>();
-	_sp<LocationSupplier> locationSupplier  = make_shared<LocationSupplier>(consoleSupplier);
+	_sp<LocationSupplier> locationSupplier = make_shared<LocationSupplier>(consoleSupplier);
 
 	_sp<Strategies<evaluator::Input, evaluator::Output>> strategies = evaluator::evaluationStrategies();
-	
-	_sp<evaluator::CollectingRuleVisitor>  visitor = make_shared<evaluator::CollectingRuleVisitor>(library, strategies);
+
+	_sp<evaluator::EvaluationVisitor>  visitor = make_shared<evaluator::EvaluationVisitor>(library, strategies);
 
 	std::cout << colourize(Colour::DARK_CYAN, "\nready> ");
 	while (true) {
-		std::cout << colourize(Colour::DARK_CYAN, "\nready> ");
-		evaluator::Input input = make_pair(0, locationSupplier); 
-			evaluator::Output output = visitor->begin(input);
-		if (output.first == -1) {
-			std::cout << colourize(Colour::RED, "NOT FOUND");
-		}
-		else {
-			std::cout << colourize(Colour::GREEN, "FOUND: "+to_string(output.first)) << *output.second;
-		}
-		consoleSupplier->clear();
-		locationSupplier->clear();
 		visitor->clear();
 		strategies->clear();
+		evaluator::Input input = evaluator::Input(locationSupplier);
+		evaluator::Output output = visitor->begin(input);
+		if (output.isFailure()) {
+			std::cout << colourize(Colour::RED, "\nNOT FOUND\n");
+			consoleSupplier->clear();
+			locationSupplier->clear();
+			std::cout << colourize(Colour::DARK_CYAN, "\nready> ");
+		}
+		else {
+			std::cout << colourize(Colour::GREEN, "\nFOUND: " + to_string(output.idx)) << "\n" << *output.syntaxNodes[0];
+		}
 		/*std::pair<string, _sp<types::SyntaxNode>> ret = types::evaluateAgainstAllRules(locationSupplier, library);
 
 		string ruleName = get<0>(ret);
@@ -90,7 +90,7 @@ static void MainLoop( _sp<RuleLibrary> library) {
 int main()
 {
 	std::cout << colourize(Colour::YELLOW, "==== Hello Flock ====\n\n");
-	_sp<RuleLibrary> library = make_shared<RuleLibrary>(flock::grammar::createFlockLibrary());
+	_sp<RuleLibrary> library = flock::grammar::createFlockLibrary();
 	std::cout << printRules(library);
 	MainLoop(library);
 	return 0;
