@@ -62,23 +62,19 @@ namespace flock {
 			library->addSymbol("alias", rule::SEQ({ rule::RULE("_identifier"),
 					rule::EQ('='),
 					rule::RULE("_identifier") }));
-			library->addPart("aliasOrIdentifier", rule::OR({ rule::RULE("alias"),rule::RULE("_identifier") }));
-			library->addSymbol("aliasList", rule::OR({ rule::RULE("aliasOrIdentifier"),
-				rule::SEQ({ 
+			library->addSymbol("aliasList", rule::SEQ({
 					rule::EQ('('),
-					rule::OR( 
-						rule::RULE("aliasOrIdentifier"),
-						rule::RULE("_aliasList")),
+					rule::RULE("aliasListOrIdentifier"),
 					rule::REP(rule::SEQ({
 						rule::EQ(','),
-						rule::OR(
-							rule::RULE("aliasOrIdentifier"),
-							rule::RULE("_aliasList"))
+						rule::RULE("aliasListOrIdentifier")
 						})),
 					rule::EQ(')')
-					})
 				}));
-			library->addSymbol("use", rule::SEQ({ rule::EQ("use") , rule::RULE("wsp*") , rule::OPT(rule::RULE("aliasList")), rule::RULE("lineEnd+") }));
+
+			library->addPart("aliasOrIdentifier", rule::OR({ rule::RULE("alias"),rule::RULE("_identifier") }));
+			library->addPart("aliasListOrIdentifier", rule::OR({ rule::RULE("aliasOrIdentifier"),rule::RULE("_aliasList") }));
+			library->addSymbol("use", rule::SEQ({ rule::EQ("use") , rule::RULE("wsp*") , rule::OPT(rule::RULE("aliasListOrIdentifier")), rule::RULE("lineEnd+") }));
 			return library;
 		};
 

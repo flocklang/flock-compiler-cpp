@@ -18,6 +18,7 @@
 
 #include "Source.h"
 #include "Visitor.h"
+#include "ConsoleFormat.h"
 
  ///
  /// Basic Grammar, that allows to employ basic BNF style grammars in language detection.
@@ -89,8 +90,8 @@ namespace flock {
 			}
 
 			friend std::ostream& operator<<(std::ostream& os, const SyntaxNode& node) {
-				string printRange = node.range ? ": " + node.range->source : "";
-				os << "{ " << node.type << printRange;
+				string printRange = node.range ? ": \"" + colourize(colour::Colour::GREEN, node.range->source) +"\"": "";
+				os << "{ " << colourize(colour::Colour::YELLOW, node.type) << printRange;
 				if (!node.children.empty()) {
 
 					os << ": ";

@@ -60,13 +60,13 @@ static void MainLoop(_sp<RuleLibrary> library) {
 		evaluator::Input input = evaluator::Input(locationSupplier);
 		evaluator::Output output = visitor->begin(input);
 		if (output.isFailure()) {
-			std::cout << colourize(Colour::RED, "\nNOT FOUND\n");
+			std::cout << colourize(Colour::DARK_GREEN, "\nDONE\n");
 			consoleSupplier->clear();
 			locationSupplier->clear();
 			std::cout << colourize(Colour::DARK_CYAN, "\nready> ");
 		}
 		else {
-			std::cout << colourize(Colour::GREEN, "\nFOUND: " + to_string(output.idx)) << "\n" << *output.syntaxNodes[0];
+			std::cout << colourize(Colour::DARK_GREEN, "\nFOUND: " + to_string(output.idx) + " characters\n") << *output.syntaxNodes[0];
 		}
 		/*std::pair<string, _sp<types::SyntaxNode>> ret = types::evaluateAgainstAllRules(locationSupplier, library);
 
