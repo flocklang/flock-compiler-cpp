@@ -37,10 +37,7 @@ namespace flock {
 			using Tokens = _sp<supplier::CachedSupplier<Location, _sp<Range>>>;
 			struct Input;
 			struct Output;
-			class SyntaxCollector;
 			class SyntaxStrategies;
-			class NonSyntaxRuleStrategy;
-			class SyntaxRuleStrategy;
 			using EvaluationVisitor = RuleVisitor<Input, Output>;
 			using Key = int;
 
