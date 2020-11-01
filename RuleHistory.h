@@ -196,6 +196,7 @@ namespace flock {
 
 				virtual void clear() override {
 					histories->clear();
+					WrappingStrategies<IN, OUT>::clear();
 				}
 			protected:
 				_sp<RuleHistories<KEY, OUT>> histories;

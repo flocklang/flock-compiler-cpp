@@ -200,16 +200,7 @@ namespace flock {
 							Output newOut = visitor->visitByName(*rule, input);
 							if (newOut.idx > out.idx) {
 								name = *rule;
-
-								_sp<SyntaxNode> syntaxNode = make_shared<SyntaxNode>(name, input.tokens->pollRangeBetween(input.idx, newOut.idx));
-								if (newOut.hasNodes()) {
-									for (_sp<SyntaxNode> child : newOut.syntaxNodes) {
-										if (child) {
-											syntaxNode->append(child->clone());
-										}
-									}
-								}
-								out = Output(newOut.idx, syntaxNode);
+								out = newOut;
 							}
 						}
 						catch (string exc) {
@@ -218,6 +209,16 @@ namespace flock {
 					}
 					if (out.isSuccess()) {
 						auto evaluated = input.tokens->popRange(out.idx - input.idx);
+
+						_sp<SyntaxNode> syntaxNode = make_shared<SyntaxNode>(name, input.tokens->pollRangeBetween(input.idx, out.idx));
+						if (out.hasNodes()) {
+							for (_sp<SyntaxNode> child : out.syntaxNodes) {
+								if (child) {
+									syntaxNode->append(child->clone());
+								}
+							}
+						}
+						return Output(out.idx, syntaxNode);
 					}
 					return out; // return the first as a success
 				};
@@ -260,11 +261,6 @@ namespace flock {
 						getWrappedStratagies()->addStrategy(type, strategy);
 					}
 				}
-
-
-				virtual void clear() override {
-				}
-			protected:
 			};
 
 			const static _sp<EvaluationMixins> evaluationMixins = make_shared<EvaluationMixins>();
